@@ -1,0 +1,38 @@
+{
+  "name": "somehow-circle",
+  "description": "",
+  "version": "0.0.1",
+  "main": "src/index.js",
+  "unpkg": "builds/somehow-circle.min.js",
+  "author": "Spencer Kelly (spencermountain)",
+  "homepage": "https://github.com/spencermountain/somehow-circle",
+  "scripts": {
+    "start": "budo index.js:assets/bundle.js --live",
+    "watch": "npm run start",
+    "build": "node scripts/build.js",
+    "build:demo": "browserify index.js -t [ babelify --presets [ @babel/preset-env ] ] | derequire > ./assets/bundle.js"
+  },
+  "prettier": {
+    "trailingComma": "none",
+    "tabWidth": 2,
+    "semi": false,
+    "singleQuote": true,
+    "printWidth": 100
+  },
+  "dependencies": {
+    "htm": "2.2.1",
+    "spacetime": "6.0.1",
+    "spencer-color": "^0.1.0",
+    "vhtml": "^2.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.6.0",
+    "@babel/preset-env": "7.6.0",
+    "babelify": "10.0.0",
+    "budo": "11.6.3",
+    "derequire": "2.0.6",
+    "shelljs": "^0.8.3",
+    "terser": "4.3.1"
+  },
+  "licence": "MIT"
+}
