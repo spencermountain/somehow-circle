@@ -9,10 +9,55 @@ class Line {
     this.curve = d3Shape.curveCatmullRomClosed
     this.color = 'steelblue'
     this.fill = 'none'
+    this.closed = true
+  }
+  rBounds() {
+    let min = 0
+    let max = 0
+    this.data.forEach(o => {
+      if (o.r > max) {
+        max = o.r
+      }
+      if (o.r < min) {
+        min = o.r
+      }
+    })
+    return {
+      min: min,
+      max: max
+    }
+  }
+  xBounds() {
+    let min = 0
+    let max = 0
+    this.data.forEach(o => {
+      if (o.x > max) {
+        max = o.x
+      }
+      if (o.x < min) {
+        min = o.x
+      }
+    })
+    return {
+      min: min,
+      max: max
+    }
   }
   straight() {
-    this.curve = this.curve = d3Shape.curveLinearClosed
+    this.curve = d3Shape.curveLinearClosed
     return this
+  }
+  close(bool) {
+    this.closed = bool
+    if (this.curve === d3Shape.curveLinearClosed || this.curve === d3Shape.curveLinearOpen) {
+      this.curve = bool ? d3Shape.curveLinearClosed : d3Shape.curveLinearOpen
+    } else {
+      this.curve = bool ? d3Shape.curveCatmullRomClosed : d3Shape.curveCatmullRomOpen
+    }
+    return this
+  }
+  open(bool) {
+    return this.close(!bool)
   }
   color(c) {
     this.color = colors[c] || c
@@ -20,6 +65,10 @@ class Line {
   }
   fill(c) {
     this.fill = colors[c] || c
+    return this
+  }
+  set(data) {
+    this.data = data
     return this
   }
   path(data) {
@@ -31,7 +80,7 @@ class Line {
         return x(d.x)
       })
       .radius(function(d) {
-        return rScale(d.y)
+        return rScale(d.r)
       })
       .curve(this.curve)
     return line(data)
@@ -39,17 +88,7 @@ class Line {
   build() {
     let h = this.world.html
 
-    let data = [
-      { x: 3, y: 2 },
-      { x: 13, y: 22 },
-      { x: 23, y: 42 },
-      { x: 33, y: 12 },
-      { x: 53, y: 99 },
-      { x: 63, y: 22 },
-      { x: 73, y: 92 },
-      { x: 83, y: 12 }
-    ]
-    let path = this.path(data)
+    let path = this.path(this.data)
     let attrs = {
       d: path,
       stroke: this.color,

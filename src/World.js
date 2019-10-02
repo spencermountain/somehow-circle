@@ -3,6 +3,7 @@ const vhtml = require('vhtml')
 const scaleLinear = require('./_linear')
 const Line = require('./shapes/Line')
 const Circle = require('./shapes/Circle')
+const Arc = require('./shapes/Arc')
 const Text = require('./shapes/Text')
 
 class World {
@@ -33,10 +34,54 @@ class World {
     this.shapes.push(shape)
     return shape
   }
+  arc(obj) {
+    let shape = new Arc(obj, this)
+    this.shapes.push(shape)
+    return shape
+  }
   text(obj) {
     let shape = new Text(obj, this)
     this.shapes.push(shape)
     return shape
+  }
+  fitX() {
+    let min = 0
+    let max = 0
+    this.shapes.forEach(s => {
+      let o = s.xBounds()
+      if (o.min !== null && o.min < min) {
+        min = o.min
+      }
+      if (o.max !== null && o.max > max) {
+        max = o.max
+      }
+    })
+    this.xScale = scaleLinear({
+      world: [0, 2 * Math.PI],
+      minmax: [min, max]
+    })
+  }
+  fitR() {
+    let min = 0
+    let max = 0
+    this.shapes.forEach(s => {
+      let o = s.rBounds()
+      if (o.min !== null && o.min < min) {
+        min = o.min
+      }
+      if (o.max !== null && o.max > max) {
+        max = o.max
+      }
+    })
+    this.rScale = scaleLinear({
+      world: [0, 50],
+      minmax: [min, max]
+    })
+  }
+  fit() {
+    this.fitX()
+    this.fitR()
+    return this
   }
   build() {
     let h = this.html
