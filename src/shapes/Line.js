@@ -7,10 +7,11 @@ class Line {
     this.data = obj.data || []
     this.attrs = {}
     this.curve = d3Shape.curveCatmullRomClosed
-    this.color = 'steelblue'
+    this._color = 'steelblue'
     this.fill = 'none'
     this.closed = true
     this._width = 1
+    this._opacity = 0
   }
   rBounds() {
     let min = 0
@@ -48,6 +49,10 @@ class Line {
     this.curve = d3Shape.curveLinearClosed
     return this
   }
+  opacity(n) {
+    this._opacity = n
+    return this
+  }
   close(bool) {
     this.closed = bool
     if (this.curve === d3Shape.curveLinearClosed || this.curve === d3Shape.curveLinearOpen) {
@@ -61,7 +66,7 @@ class Line {
     return this.close(!bool)
   }
   color(c) {
-    this.color = colors[c] || c
+    this._color = colors[c] || c
     return this
   }
   fill(c) {
@@ -96,8 +101,9 @@ class Line {
     let path = this.path(this.data)
     let attrs = {
       d: path,
-      stroke: this.color,
+      stroke: this._color,
       fill: this.fill,
+      opacity: this._opacity,
       'stroke-width': this._width
     }
     return h`<path ...${attrs}/>`

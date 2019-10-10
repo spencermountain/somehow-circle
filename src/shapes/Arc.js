@@ -57,12 +57,6 @@ class Arc {
     let rScale = this.world.rScale
     let xScale = this.world.xScale
     let r = rScale(this._radius)
-    console.log({
-      startAngle: xScale(this._from),
-      endAngle: xScale(this._to),
-      innerRadius: r,
-      outerRadius: r + rScale(this._width)
-    })
     return d3Shape.arc()({
       startAngle: xScale(this._from),
       endAngle: xScale(this._to),

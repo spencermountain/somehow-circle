@@ -9,9 +9,10 @@ class Label {
     this.fill = 'none'
     this._radius = 50
     this._width = 0.2
+    this._min = 0
     this._x = 0
     this._r = 40
-    this._size = 4
+    this._size = 3
   }
   rBounds() {
     return {
@@ -27,6 +28,10 @@ class Label {
   }
   at(x) {
     this._x = x
+    return this
+  }
+  min(x) {
+    this._min = x
     return this
   }
   length(n) {
@@ -48,8 +53,9 @@ class Label {
   drawLine() {
     let h = this.world.html
     let r = this.world.rScale(this._r * 0.9)
-    let { x, y } = this.world.findPoint(this._x, r)
-    return h`<line x1=0 y1=0 x2=${x} y2=${y} stroke=${this._color} stroke-width=${this._width}/>`
+    let { x, y } = this.world.findPoint(this._x, r * 0.9)
+    let min = this.world.findPoint(this._x, this._min)
+    return h`<line x1=${min.x} y1=${min.y} x2=${x} y2=${y} stroke=${this._color} stroke-width=${this._width}/>`
   }
   drawText() {
     let world = this.world
@@ -66,18 +72,6 @@ class Label {
   }
   build() {
     let h = this.world.html
-    let xScale = this.world.xScale
-    // console.log(xScale(50))
-    // console.log(xScale(this._x))
-
-    // let attrs = {
-    //   cx: '0',
-    //   cy: '0',
-    //   r: rScale(this._radius),
-    //   stroke: this._color,
-    //   fill: this.fill,
-    //   'stroke-width': this._width
-    // }
     return h`<g>
       ${this.drawLine()}
       ${this.drawText()}

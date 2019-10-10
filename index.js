@@ -1,22 +1,27 @@
 const somehowCircle = require('./src')
 let w = somehowCircle({})
 
-// let data = [
-//   { x: 3, r: 2 },
-//   { x: 13, r: 22 },
-//   { x: 23, r: 42 },
-//   { x: 33, r: 12 },
-//   { x: 53, r: 99 },
-//   { x: 63, r: 22 },
-//   { x: 73, r: 92 }
-//   // { x: 83, r: 12 }
-// ]
-// w.line().set(data)
-// w.circle().radius(50)
+let data = [
+  { x: 3, r: 2 },
+  { x: 13, r: 22 },
+  { x: 23, r: 12 },
+  { x: 33, r: 12 },
+  { x: 53, r: 19 },
+  { x: 63, r: 22 },
+  { x: 73, r: 12 }
+  // { x: 83, r: 12 }
+]
+w.line()
+  .set(data)
+  .width(5)
+  .opacity(0.5)
+w.circle().radius(50)
+
 w.arc()
-  .from(10)
+  .from(0)
   .to(20)
   .radius(10)
+  .color('green')
   .width(5)
 w.arc()
   .from(0)
@@ -25,11 +30,17 @@ w.arc()
   .radius(20)
   .width(10)
 
-w.label('25').at(25)
-w.label('50').at(50)
-w.label('0asdf').at(0)
+w.label('95%')
+  .at(95)
+  .min(10)
+w.label('25%')
+  .at(25)
+  .min(10)
+w.label('50%')
+  .at(50)
+  .min(10)
 
-w.rotate(90)
+// w.rotate(90)
 
 // w.text('hello')
 w.fit()
