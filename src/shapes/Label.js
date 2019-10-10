@@ -52,10 +52,17 @@ class Label {
     return h`<line x1=0 y1=0 x2=${x} y2=${y} stroke=${this._color} stroke-width=${this._width}/>`
   }
   drawText() {
-    let h = this.world.html
-    let r = this.world.rScale(this._r)
-    let { x, y } = this.world.findPoint(this._x, r)
-    return h`<text x=${x} y=${y} stroke="none" fill=${this._color} font-size=${this._size} dx="-0.3em" dy="0.2em">${this._text}</text>`
+    let world = this.world
+    let h = world.html
+    let r = world.rScale(this._r)
+    let { x, y } = world.findPoint(this._x, r)
+    return h`<text x=${x} y=${y} stroke="none" style="border:1px solid grey;" fill=${
+      this._color
+    } font-size=${
+      this._size
+    }  dominant-baseline="middle" text-anchor="middle" transform=rotate(${-world._rotate},${x},${y})>${
+      this._text
+    }</text>`
   }
   build() {
     let h = this.world.html

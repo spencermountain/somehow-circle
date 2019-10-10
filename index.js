@@ -27,8 +27,15 @@ w.arc()
 
 w.label('25').at(25)
 w.label('50').at(50)
-w.label('100').at(100)
+w.label('0asdf').at(0)
+
+w.rotate(90)
+
 // w.text('hello')
 w.fit()
+
+// console.log(w.xScale(80))
+w.xScale.fit(0, 100)
+// console.log(w.xScale(80))
 
 document.querySelector('#stage').innerHTML = w.build()

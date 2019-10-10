@@ -134,7 +134,7 @@ class World {
       viewBox: `-50,-50,${this.width},${this.height}`,
       // viewBox: `0,0,10,10`,
       preserveAspectRatio: 'xMidYMid meet',
-      transform: 'rotate(0,0,0)'
+      transform: `rotate(${this._rotate},0,0)`
       // style: 'overflow:visible; margin: 10px 20px 25px 25px;' // border:1px solid lightgrey;
     }
     return h`<svg ...${attrs}>
