@@ -1,26 +1,28 @@
 const colors = require('spencer-color').colors
 
 class Label {
-  constructor(obj = {}, world) {
+  constructor(text, world) {
     this.world = world
+    this._text = text
     this.attrs = {}
-    this._color = 'lightgrey'
+    this._color = 'grey'
     this.fill = 'none'
     this._radius = 50
     this._width = 0.2
     this._x = 0
-    this._length = 50
+    this._r = 40
+    this._size = 4
   }
   rBounds() {
     return {
       min: 0,
-      max: this._radius + this._width
+      max: this._radius
     }
   }
   xBounds() {
     return {
-      min: null,
-      max: null //hmm
+      min: this._x,
+      max: this._x
     }
   }
   at(x) {
@@ -45,21 +47,15 @@ class Label {
   }
   drawLine() {
     let h = this.world.html
-    let { x, y } = this.world.findPoint(this._x, 15)
-    return h`<line x1=0 y1=0 x2=${x} y2=${y} stroke="black"/>`
+    let r = this.world.rScale(this._r * 0.9)
+    let { x, y } = this.world.findPoint(this._x, r)
+    return h`<line x1=0 y1=0 x2=${x} y2=${y} stroke=${this._color} stroke-width=${this._width}/>`
   }
   drawText() {
-    let world = this.world
     let h = this.world.html
-    let arr = [0, 10, 20, 30, 40, 50, 60]
-    arr = arr.map(n => {
-      let o = world.findPoint(n, 25)
-      // return h`<line x1=0 y1=0 x2=${x} y2=${y} stroke="black"/>`
-      return h`<text x=${o.x} y=${o.y} stroke="black"   dx="-0.3em" dy="0.2em">${n}</text>`
-    })
-    return h`<g>
-      ${arr}
-    </g>`
+    let r = this.world.rScale(this._r)
+    let { x, y } = this.world.findPoint(this._x, r)
+    return h`<text x=${x} y=${y} stroke="none" fill=${this._color} font-size=${this._size} dx="-0.3em" dy="0.2em">${this._text}</text>`
   }
   build() {
     let h = this.world.html

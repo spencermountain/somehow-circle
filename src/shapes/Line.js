@@ -10,13 +10,14 @@ class Line {
     this.color = 'steelblue'
     this.fill = 'none'
     this.closed = true
+    this._width = 1
   }
   rBounds() {
     let min = 0
     let max = 0
     this.data.forEach(o => {
       if (o.r > max) {
-        max = o.r
+        max = o.r + this._width
       }
       if (o.r < min) {
         min = o.r
@@ -71,6 +72,10 @@ class Line {
     this.data = data
     return this
   }
+  width(n) {
+    this._width = n
+    return this
+  }
   path(data) {
     let x = this.world.xScale
     let rScale = this.world.rScale
@@ -92,7 +97,8 @@ class Line {
     let attrs = {
       d: path,
       stroke: this.color,
-      fill: this.fill
+      fill: this.fill,
+      'stroke-width': this._width
     }
     return h`<path ...${attrs}/>`
   }

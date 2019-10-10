@@ -1,20 +1,22 @@
 const d3Shape = require('d3-shape')
+const colors = require('spencer-color').colors
+
 class Arc {
   constructor(obj = {}, world) {
     this.world = world
     this.data = obj.data || []
     this.attrs = {}
-    this.color = 'none'
-    this.fill = 'steelblue'
+    this._stroke = 'none'
+    this._fill = 'steelblue'
     this._radius = 25
-    this.width = 5
+    this._width = 5
     this._from = 0
     this._to = 50
   }
   rBounds() {
     return {
       min: 0,
-      max: this._radius
+      max: this._radius + this._width
     }
   }
   xBounds() {
@@ -23,11 +25,23 @@ class Arc {
       max: this._to
     }
   }
+  color(c) {
+    this._fill = colors[c] || c
+    return this
+  }
+  stroke(c) {
+    this._stroke = colors[c] || c
+    return this
+  }
   width(n) {
-    this.width = n
+    this._width = n
     return this
   }
   radius(n) {
+    this._radius = n
+    return this
+  }
+  r(n) {
     this._radius = n
     return this
   }
@@ -43,19 +57,25 @@ class Arc {
     let rScale = this.world.rScale
     let xScale = this.world.xScale
     let r = rScale(this._radius)
+    console.log({
+      startAngle: xScale(this._from),
+      endAngle: xScale(this._to),
+      innerRadius: r,
+      outerRadius: r + rScale(this._width)
+    })
     return d3Shape.arc()({
       startAngle: xScale(this._from),
       endAngle: xScale(this._to),
       innerRadius: r,
-      outerRadius: r + rScale(this.width)
+      outerRadius: r + rScale(this._width)
     })
   }
   build() {
     let h = this.world.html
     let attrs = {
       d: this.path(),
-      stroke: this.color,
-      fill: this.fill
+      stroke: this._stroke,
+      fill: this._fill
     }
     return h`<path ...${attrs}/>`
   }
