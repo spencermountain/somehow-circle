@@ -26,8 +26,9 @@ class Label {
       max: this._x
     }
   }
-  at(x) {
+  at(x, r) {
     this._x = x
+    this._r = r
     return this
   }
   min(x) {

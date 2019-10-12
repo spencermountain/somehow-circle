@@ -13,6 +13,13 @@ class Line {
     this._width = 1
     this._opacity = 0
   }
+  dotted(n) {
+    if (n === true) {
+      n = 4
+    }
+    this.attrs['stroke-dasharray'] = n || 4
+    return this
+  }
   rBounds() {
     let min = 0
     let max = 0
@@ -104,7 +111,8 @@ class Line {
       stroke: this._color,
       fill: this.fill,
       opacity: this._opacity,
-      'stroke-width': this._width
+      'stroke-width': this._width,
+      'stroke-dasharray': this.attrs['stroke-dasharray']
     }
     return h`<path ...${attrs}/>`
   }
