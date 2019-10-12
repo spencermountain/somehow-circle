@@ -1,4 +1,4 @@
-/* somehow v0.0.1
+/* somehow v0.0.2
    github.com/spencermountain/somehow-circle
    MIT
 */
@@ -2488,9 +2488,26 @@ function () {
     this._width = 5;
     this._from = 0;
     this._to = 50;
+    this._opacity = 1;
   }
 
   _createClass(Arc, [{
+    key: "opacity",
+    value: function opacity(n) {
+      this._opacity = n;
+      return this;
+    }
+  }, {
+    key: "dotted",
+    value: function dotted(n) {
+      if (n === true) {
+        n = 4;
+      }
+
+      this.attrs['stroke-dasharray'] = n || 4;
+      return this;
+    }
+  }, {
     key: "rBounds",
     value: function rBounds() {
       return {
@@ -2558,7 +2575,8 @@ function () {
         startAngle: xScale(this._from),
         endAngle: xScale(this._to),
         innerRadius: r,
-        outerRadius: r + rScale(this._width)
+        outerRadius: r // + rScale(this._width)
+
       });
     }
   }, {
@@ -2567,8 +2585,11 @@ function () {
       var h = this.world.html;
       var attrs = {
         d: this.path(),
-        stroke: this._stroke,
-        fill: this._fill
+        stroke: this._fill,
+        'stroke-width': this._width,
+        fill: 'none',
+        opacity: this._opacity,
+        'stroke-dasharray': this.attrs['stroke-dasharray']
       };
       return h(_templateObject(), attrs);
     }
@@ -2756,8 +2777,9 @@ function () {
     }
   }, {
     key: "at",
-    value: function at(x) {
+    value: function at(x, r) {
       this._x = x;
+      this._r = r;
       return this;
     }
   }, {
@@ -2875,6 +2897,16 @@ function () {
   }
 
   _createClass(Line, [{
+    key: "dotted",
+    value: function dotted(n) {
+      if (n === true) {
+        n = 4;
+      }
+
+      this.attrs['stroke-dasharray'] = n || 4;
+      return this;
+    }
+  }, {
     key: "rBounds",
     value: function rBounds() {
       var _this = this;
@@ -2990,7 +3022,8 @@ function () {
         stroke: this._color,
         fill: this.fill,
         opacity: this._opacity,
-        'stroke-width': this._width
+        'stroke-width': this._width,
+        'stroke-dasharray': this.attrs['stroke-dasharray']
       };
       return h(_templateObject(), attrs);
     }
@@ -3022,6 +3055,8 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+var colors = _dereq_('spencer-color').colors;
+
 var Text =
 /*#__PURE__*/
 function () {
@@ -3034,17 +3069,25 @@ function () {
     this.world = world;
     this.attrs = {};
     this.text = txt;
-    this.color = 'grey';
+    this._color = 'grey';
     this.size = 5;
     this._dx = 0;
     this._dr = 0;
+    this._dy = 0;
     this._x = 0;
     this._r = 0;
+    this._opacity = 1;
     this._align = 'middle';
     this._rotate = true;
   }
 
   _createClass(Text, [{
+    key: "opacity",
+    value: function opacity(n) {
+      this._opacity = n;
+      return this;
+    }
+  }, {
     key: "xBounds",
     value: function xBounds() {
       return {
@@ -3074,9 +3117,21 @@ function () {
       return this;
     }
   }, {
+    key: "color",
+    value: function color(c) {
+      this._color = colors[c] || c;
+      return this;
+    }
+  }, {
     key: "dx",
     value: function dx(n) {
       this._dx = n;
+      return this;
+    }
+  }, {
+    key: "dy",
+    value: function dy(n) {
+      this._dy = n;
       return this;
     }
   }, {
@@ -3097,8 +3152,9 @@ function () {
       var h = this.world.html;
       var attrs = {
         x: this._dx,
-        y: this._dr,
-        fill: this.color,
+        y: this._dy,
+        fill: this._color,
+        opacity: this._opacity,
         'text-anchor': this._align,
         'font-size': this.size
       };
@@ -3111,5 +3167,5 @@ function () {
 
 module.exports = Text;
 
-},{}]},{},[8])(8)
+},{"spencer-color":4}]},{},[8])(8)
 });
