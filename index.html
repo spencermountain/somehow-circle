@@ -2,18 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title></title>
-    <link href="./assets/spencer.min.css" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>•</title>
+    <link rel="stylesheet" href="/build/spencer.min.css" />
+    <link rel="stylesheet" href="/build/bundle.css" />
+    <script defer src="/build/bundle.js"></script>
+    <style>
+      /* latin */
+      @font-face {
+        font-family: 'Merriweather';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: local('Merriweather Regular'), local('Merriweather-Regular'),
+          url(./build/merriweather.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+          U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      html {
+        font-family: 'Merriweather', Georgia, 'Times New Roman', Times, serif;
+        color: #4d4d4d;
+        background-color: #3b4252;
+        color: #c7cdd8;
+      }
+      body {
+        background-color: #3b4252;
+        color: #c7cdd8;
+      }
+    </style>
   </head>
-
-  <body>
-    <div class="col-middle">
-      <h2 class="grey">somehow-circle</h2>
-      <div>by <a href="https://github.com/spencermountain">spencermountain</a></div>
-      <div class="m2 f2"><a href="https://github.com/spencermountain/somehow-circle">Docs</a></div>
-      <div id="stage" class=" rounded w80p maxw10 minw7 m5 center"></div>
-    </div>
-    <script src="./assets/bundle.js"></script>
-  </body>
+  <body></body>
 </html>
