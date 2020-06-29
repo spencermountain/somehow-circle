@@ -10,8 +10,9 @@
 
   <div>somehow-circle</div>
 
-  <Round from="0" to="360">
-    <Arc from="0" to="45" color="blue" />
-    <Arc from="45" to="90" color="red" />
+  <Round>
+    <Arc from="0" to="90" color="blue" />
+    <Arc from="90" to="180" color="red" width="100" radius="0" />
+    <Arc from="180" to="280" color="green" />
   </Round>
 </div>

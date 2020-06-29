@@ -4,7 +4,7 @@
   import colors from './lib/colors'
   export let to = 90
   export let from = 0
-  export let radius = 20
+  export let radius = 80
   export let width = 20
   to = Number(to)
   from = Number(from)

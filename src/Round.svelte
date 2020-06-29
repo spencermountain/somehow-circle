@@ -8,7 +8,7 @@
   export let radius = 500
   export let rotate = 0
   export let from = 0
-  export let to = 365
+  export let to = 360
   radius = Number(radius)
   let data = {
     radius: radius,
@@ -20,7 +20,7 @@
   let paths = []
   onMount(() => {
     paths = layout($items, data)
-    console.log(paths)
+    // console.log(paths)
   })
 </script>
 
