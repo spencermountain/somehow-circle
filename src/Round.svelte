@@ -1,11 +1,7 @@
 <script>
-  import { writable } from 'svelte/store'
-
-  import { setContext, onMount } from 'svelte'
-  import scale from './lib/scale'
-  import colors from './lib/colors'
+  import { onMount } from 'svelte'
   import layout from './layout'
-  import { arcs, lines, ticks } from './stores.js'
+  import { arcs, lines, labels } from './stores.js'
 
   export let radius = 500
   export let rotate = 0
@@ -23,7 +19,7 @@
   }
   let shapes = []
   onMount(() => {
-    shapes = layout($arcs, $lines, $ticks, world)
+    shapes = layout($arcs, $lines, $labels, world)
     // console.log(shapes)
   })
 </script>
@@ -35,7 +31,7 @@
 </style>
 
 <div class="container">
-  <svg viewBox="-50,-50,100,100" width={radius * 2} height={radius * 2}>
+  <svg viewBox="-50,-50,100,100" shape-rendering="geometricPrecision">
     {#each shapes as o}
       {#if o.type === 'arc'}
         <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
@@ -49,8 +45,16 @@
           style=""
           stroke-width={o.width} />
       {/if}
-      {#if o.type === 'ticks'}
-        <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
+      {#if o.type === 'label'}
+        <text
+          x={o.x}
+          y={o.y}
+          transform="rotate({o.angle},{o.x},{o.y})"
+          font-size={o.size}
+          text-anchor={o.align}
+          fill={o.color}>
+          {o.text}
+        </text>
       {/if}
     {/each}
   </svg>

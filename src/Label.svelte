@@ -1,21 +1,23 @@
 <script>
-  import { lines } from './stores.js'
+  import { labels } from './stores.js'
   import colors from './lib/colors'
   export let angle = 0
-  export let length = 40
   export let radius = 0
-  export let width = 0.1
+  export let size = 1.5
+  export let align = 'left'
+  export let text = ''
 
   export let color = 'grey'
   color = colors[color] || color
 
-  lines.update(arr => {
+  labels.update(arr => {
     arr.push({
+      text: text,
       color: color,
+      align: align,
       angle: Number(angle),
       radius: Number(radius),
-      length: Number(length),
-      width: Number(width)
+      size: Number(size)
     })
     return arr
   })
