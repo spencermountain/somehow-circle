@@ -4,6 +4,7 @@ var app = (function () {
     'use strict';
 
     function noop() { }
+    const identity = x => x;
     function assign(tar, src) {
         // @ts-ignore
         for (const k in src)
@@ -80,6 +81,41 @@ var app = (function () {
             const slot_context = get_slot_context(slot_definition, ctx, $$scope, get_slot_context_fn);
             slot.p(slot_context, slot_changes);
         }
+    }
+
+    const is_client = typeof window !== 'undefined';
+    let now = is_client
+        ? () => window.performance.now()
+        : () => Date.now();
+    let raf = is_client ? cb => requestAnimationFrame(cb) : noop;
+
+    const tasks = new Set();
+    function run_tasks(now) {
+        tasks.forEach(task => {
+            if (!task.c(now)) {
+                tasks.delete(task);
+                task.f();
+            }
+        });
+        if (tasks.size !== 0)
+            raf(run_tasks);
+    }
+    /**
+     * Creates a new task that runs on each raf frame
+     * until it returns a falsy value or is aborted
+     */
+    function loop(callback) {
+        let task;
+        if (tasks.size === 0)
+            raf(run_tasks);
+        return {
+            promise: new Promise(fulfill => {
+                tasks.add(task = { c: callback, f: fulfill });
+            }),
+            abort() {
+                tasks.delete(task);
+            }
+        };
     }
 
     function append(target, node) {
@@ -229,6 +265,12 @@ var app = (function () {
             block.o(local);
         }
     }
+
+    const globals = (typeof window !== 'undefined'
+        ? window
+        : typeof globalThis !== 'undefined'
+            ? globalThis
+            : global);
     function create_component(block) {
         block && block.c();
     }
@@ -399,6 +441,58 @@ var app = (function () {
         }
         $capture_state() { }
         $inject_state() { }
+    }
+
+    const subscriber_queue = [];
+    /**
+     * Create a `Writable` store that allows both updating and reading by subscription.
+     * @param {*=}value initial value
+     * @param {StartStopNotifier=}start start and stop notifications for subscriptions
+     */
+    function writable(value, start = noop) {
+        let stop;
+        const subscribers = [];
+        function set(new_value) {
+            if (safe_not_equal(value, new_value)) {
+                value = new_value;
+                if (stop) { // store is ready
+                    const run_queue = !subscriber_queue.length;
+                    for (let i = 0; i < subscribers.length; i += 1) {
+                        const s = subscribers[i];
+                        s[1]();
+                        subscriber_queue.push(s, value);
+                    }
+                    if (run_queue) {
+                        for (let i = 0; i < subscriber_queue.length; i += 2) {
+                            subscriber_queue[i][0](subscriber_queue[i + 1]);
+                        }
+                        subscriber_queue.length = 0;
+                    }
+                }
+            }
+        }
+        function update(fn) {
+            set(fn(value));
+        }
+        function subscribe(run, invalidate = noop) {
+            const subscriber = [run, invalidate];
+            subscribers.push(subscriber);
+            if (subscribers.length === 1) {
+                stop = start(set) || noop;
+            }
+            run(value);
+            return () => {
+                const index = subscribers.indexOf(subscriber);
+                if (index !== -1) {
+                    subscribers.splice(index, 1);
+                }
+                if (subscribers.length === 0) {
+                    stop();
+                    stop = null;
+                }
+            };
+        }
+        return { set, update, subscribe };
     }
 
     //a very-tiny version of d3-scale's scaleLinear
@@ -986,8 +1080,6 @@ var app = (function () {
     //export let name = ''
     let q = Math.PI / 2;
     const trig = [-Math.PI, Math.PI];
-    // const trig = [-0.5 * Math.PI, 0.5 * Math.PI]
-    // const trig = [0, 1]
 
     const maxRadius = function (items) {
       let max = 0;
@@ -1000,92 +1092,42 @@ var app = (function () {
       return max
     };
 
-    const layout = function (items, data) {
+    const layout = function (items, world) {
       let radius = maxRadius(items);
-      let xScale = scaleLinear({ minmax: [data.from, data.to], world: trig });
-
+      let xScale = scaleLinear({ minmax: [world.from, world.to], world: trig });
+      let rotate = 0; //toRadian(world.rotate)
+      console.log(world.rotate);
       let rScale = scaleLinear({ minmax: [0, radius], world: [0, 50] });
-      let paths = items.map((obj) => {
+      let shapes = items.map((obj) => {
         let r = rScale(obj.radius);
         let path = arc()({
-          startAngle: xScale(obj.to) - q,
-          endAngle: xScale(obj.from) - q,
+          startAngle: xScale(obj.to) - q + rotate,
+          endAngle: xScale(obj.from) - q + rotate,
           innerRadius: r,
           outerRadius: r + rScale(obj.width)
         });
         return {
-          color: obj.color,
-          path: path
+          path: path,
+          color: obj.color
         }
       });
-      // console.log(paths)
-      return paths
+      return shapes
     };
-
-    const subscriber_queue = [];
-    /**
-     * Create a `Writable` store that allows both updating and reading by subscription.
-     * @param {*=}value initial value
-     * @param {StartStopNotifier=}start start and stop notifications for subscriptions
-     */
-    function writable(value, start = noop) {
-        let stop;
-        const subscribers = [];
-        function set(new_value) {
-            if (safe_not_equal(value, new_value)) {
-                value = new_value;
-                if (stop) { // store is ready
-                    const run_queue = !subscriber_queue.length;
-                    for (let i = 0; i < subscribers.length; i += 1) {
-                        const s = subscribers[i];
-                        s[1]();
-                        subscriber_queue.push(s, value);
-                    }
-                    if (run_queue) {
-                        for (let i = 0; i < subscriber_queue.length; i += 2) {
-                            subscriber_queue[i][0](subscriber_queue[i + 1]);
-                        }
-                        subscriber_queue.length = 0;
-                    }
-                }
-            }
-        }
-        function update(fn) {
-            set(fn(value));
-        }
-        function subscribe(run, invalidate = noop) {
-            const subscriber = [run, invalidate];
-            subscribers.push(subscriber);
-            if (subscribers.length === 1) {
-                stop = start(set) || noop;
-            }
-            run(value);
-            return () => {
-                const index = subscribers.indexOf(subscriber);
-                if (index !== -1) {
-                    subscribers.splice(index, 1);
-                }
-                if (subscribers.length === 0) {
-                    stop();
-                    stop = null;
-                }
-            };
-        }
-        return { set, update, subscribe };
-    }
 
     const items = writable([]);
 
     /* src/Round.svelte generated by Svelte v3.23.2 */
+
+    const { console: console_1 } = globals;
     const file = "src/Round.svelte";
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[9] = list[i];
+    	child_ctx[10] = list[i];
     	return child_ctx;
     }
 
-    // (34:2) {#each paths as p}
+    // (44:4) {#each shapes as o}
     function create_each_block(ctx) {
     	let path;
     	let path_d_value;
@@ -1096,21 +1138,21 @@ var app = (function () {
     		c: function create() {
     			path = svg_element("path");
     			attr_dev(path, "class", "link");
-    			attr_dev(path, "d", path_d_value = /*p*/ ctx[9].path);
+    			attr_dev(path, "d", path_d_value = /*o*/ ctx[10].path);
     			attr_dev(path, "stroke", "none");
-    			attr_dev(path, "fill", path_fill_value = /*p*/ ctx[9].color);
+    			attr_dev(path, "fill", path_fill_value = /*o*/ ctx[10].color);
     			attr_dev(path, "stroke-width", path_stroke_width_value = 1);
-    			add_location(path, file, 34, 4, 692);
+    			add_location(path, file, 44, 6, 904);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, path, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*paths*/ 2 && path_d_value !== (path_d_value = /*p*/ ctx[9].path)) {
+    			if (dirty & /*shapes*/ 2 && path_d_value !== (path_d_value = /*o*/ ctx[10].path)) {
     				attr_dev(path, "d", path_d_value);
     			}
 
-    			if (dirty & /*paths*/ 2 && path_fill_value !== (path_fill_value = /*p*/ ctx[9].color)) {
+    			if (dirty & /*shapes*/ 2 && path_fill_value !== (path_fill_value = /*o*/ ctx[10].color)) {
     				attr_dev(path, "fill", path_fill_value);
     			}
     		},
@@ -1123,7 +1165,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(34:2) {#each paths as p}",
+    		source: "(44:4) {#each shapes as o}",
     		ctx
     	});
 
@@ -1131,12 +1173,13 @@ var app = (function () {
     }
 
     function create_fragment(ctx) {
+    	let div;
     	let svg;
     	let svg_width_value;
     	let svg_height_value;
     	let t;
     	let current;
-    	let each_value = /*paths*/ ctx[1];
+    	let each_value = /*shapes*/ ctx[1];
     	validate_each_argument(each_value);
     	let each_blocks = [];
 
@@ -1144,11 +1187,12 @@ var app = (function () {
     		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
     	}
 
-    	const default_slot_template = /*$$slots*/ ctx[6].default;
-    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[5], null);
+    	const default_slot_template = /*$$slots*/ ctx[7].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[6], null);
 
     	const block = {
     		c: function create() {
+    			div = element("div");
     			svg = svg_element("svg");
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
@@ -1161,13 +1205,16 @@ var app = (function () {
     			attr_dev(svg, "width", svg_width_value = /*radius*/ ctx[0] * 2);
     			attr_dev(svg, "height", svg_height_value = /*radius*/ ctx[0] * 2);
     			attr_dev(svg, "class", "svelte-1aem4xz");
-    			add_location(svg, file, 32, 0, 596);
+    			add_location(svg, file, 42, 2, 803);
+    			attr_dev(div, "class", "container");
+    			add_location(div, file, 41, 0, 777);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, svg, anchor);
+    			insert_dev(target, div, anchor);
+    			append_dev(div, svg);
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].m(svg, null);
@@ -1182,8 +1229,8 @@ var app = (function () {
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*paths*/ 2) {
-    				each_value = /*paths*/ ctx[1];
+    			if (dirty & /*shapes*/ 2) {
+    				each_value = /*shapes*/ ctx[1];
     				validate_each_argument(each_value);
     				let i;
 
@@ -1215,8 +1262,8 @@ var app = (function () {
     			}
 
     			if (default_slot) {
-    				if (default_slot.p && dirty & /*$$scope*/ 32) {
-    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[5], dirty, null, null);
+    				if (default_slot.p && dirty & /*$$scope*/ 64) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[6], dirty, null, null);
     				}
     			}
     		},
@@ -1230,7 +1277,7 @@ var app = (function () {
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(svg);
+    			if (detaching) detach_dev(div);
     			destroy_each(each_blocks, detaching);
     			if (detaching) detach_dev(t);
     			if (default_slot) default_slot.d(detaching);
@@ -1251,30 +1298,39 @@ var app = (function () {
     function instance($$self, $$props, $$invalidate) {
     	let $items;
     	validate_store(items, "items");
-    	component_subscribe($$self, items, $$value => $$invalidate(7, $items = $$value));
+    	component_subscribe($$self, items, $$value => $$invalidate(8, $items = $$value));
     	let { radius = 500 } = $$props;
     	let { rotate = 0 } = $$props;
     	let { from = 0 } = $$props;
     	let { to = 360 } = $$props;
+    	let { margin = 0 } = $$props;
     	radius = Number(radius);
 
-    	let data = {
+    	let world = {
     		radius,
     		rotate: Number(rotate),
     		from: Number(from),
-    		to: Number(to)
+    		to: Number(to),
+    		margin: Number(margin)
     	};
 
-    	let paths = [];
+    	let shapes = [];
 
     	onMount(() => {
-    		$$invalidate(1, paths = layout($items, data));
-    	}); // console.log(paths)
+    		$$invalidate(1, shapes = layout($items, world));
+    	});
 
-    	const writable_props = ["radius", "rotate", "from", "to"];
+    	// rotate = writable(rotate)
+    	console.log(rotate);
+
+    	rotate.subscribe(val => {
+    		console.log(val);
+    	});
+
+    	const writable_props = ["radius", "rotate", "from", "to", "margin"];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Round> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<Round> was created with unknown prop '${key}'`);
     	});
 
     	let { $$slots = {}, $$scope } = $$props;
@@ -1285,10 +1341,12 @@ var app = (function () {
     		if ("rotate" in $$props) $$invalidate(2, rotate = $$props.rotate);
     		if ("from" in $$props) $$invalidate(3, from = $$props.from);
     		if ("to" in $$props) $$invalidate(4, to = $$props.to);
-    		if ("$$scope" in $$props) $$invalidate(5, $$scope = $$props.$$scope);
+    		if ("margin" in $$props) $$invalidate(5, margin = $$props.margin);
+    		if ("$$scope" in $$props) $$invalidate(6, $$scope = $$props.$$scope);
     	};
 
     	$$self.$capture_state = () => ({
+    		writable,
     		setContext,
     		onMount,
     		scale: scaleLinear,
@@ -1299,8 +1357,9 @@ var app = (function () {
     		rotate,
     		from,
     		to,
-    		data,
-    		paths,
+    		margin,
+    		world,
+    		shapes,
     		$items
     	});
 
@@ -1309,21 +1368,29 @@ var app = (function () {
     		if ("rotate" in $$props) $$invalidate(2, rotate = $$props.rotate);
     		if ("from" in $$props) $$invalidate(3, from = $$props.from);
     		if ("to" in $$props) $$invalidate(4, to = $$props.to);
-    		if ("data" in $$props) data = $$props.data;
-    		if ("paths" in $$props) $$invalidate(1, paths = $$props.paths);
+    		if ("margin" in $$props) $$invalidate(5, margin = $$props.margin);
+    		if ("world" in $$props) world = $$props.world;
+    		if ("shapes" in $$props) $$invalidate(1, shapes = $$props.shapes);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [radius, paths, rotate, from, to, $$scope, $$slots];
+    	return [radius, shapes, rotate, from, to, margin, $$scope, $$slots];
     }
 
     class Round extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance, create_fragment, safe_not_equal, { radius: 0, rotate: 2, from: 3, to: 4 });
+
+    		init(this, options, instance, create_fragment, safe_not_equal, {
+    			radius: 0,
+    			rotate: 2,
+    			from: 3,
+    			to: 4,
+    			margin: 5
+    		});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -1364,6 +1431,14 @@ var app = (function () {
     	set to(value) {
     		throw new Error("<Round>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
+
+    	get margin() {
+    		throw new Error("<Round>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set margin(value) {
+    		throw new Error("<Round>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
     }
 
     /* src/Arc.svelte generated by Svelte v3.23.2 */
@@ -1375,7 +1450,7 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			div = element("div");
-    			add_location(div, file$1, 28, 0, 536);
+    			add_location(div, file$1, 30, 0, 580);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1407,6 +1482,7 @@ var app = (function () {
     	let { from = 0 } = $$props;
     	let { radius = 80 } = $$props;
     	let { width = 20 } = $$props;
+    	let { label = "" } = $$props;
     	to = Number(to);
     	from = Number(from);
     	radius = Number(radius);
@@ -1415,11 +1491,11 @@ var app = (function () {
     	color = colors[color] || color;
 
     	items.update(arr => {
-    		arr.push({ color, to, from, radius, width });
+    		arr.push({ color, to, from, radius, width, label });
     		return arr;
     	});
 
-    	const writable_props = ["to", "from", "radius", "width", "color"];
+    	const writable_props = ["to", "from", "radius", "width", "label", "color"];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Arc> was created with unknown prop '${key}'`);
@@ -1433,6 +1509,7 @@ var app = (function () {
     		if ("from" in $$props) $$invalidate(1, from = $$props.from);
     		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
     		if ("width" in $$props) $$invalidate(3, width = $$props.width);
+    		if ("label" in $$props) $$invalidate(5, label = $$props.label);
     		if ("color" in $$props) $$invalidate(4, color = $$props.color);
     	};
 
@@ -1444,6 +1521,7 @@ var app = (function () {
     		from,
     		radius,
     		width,
+    		label,
     		color
     	});
 
@@ -1452,6 +1530,7 @@ var app = (function () {
     		if ("from" in $$props) $$invalidate(1, from = $$props.from);
     		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
     		if ("width" in $$props) $$invalidate(3, width = $$props.width);
+    		if ("label" in $$props) $$invalidate(5, label = $$props.label);
     		if ("color" in $$props) $$invalidate(4, color = $$props.color);
     	};
 
@@ -1459,7 +1538,7 @@ var app = (function () {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [to, from, radius, width, color];
+    	return [to, from, radius, width, color, label];
     }
 
     class Arc extends SvelteComponentDev {
@@ -1471,6 +1550,7 @@ var app = (function () {
     			from: 1,
     			radius: 2,
     			width: 3,
+    			label: 5,
     			color: 4
     		});
 
@@ -1514,6 +1594,14 @@ var app = (function () {
     		throw new Error("<Arc>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
+    	get label() {
+    		throw new Error("<Arc>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set label(value) {
+    		throw new Error("<Arc>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
     	get color() {
     		throw new Error("<Arc>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
@@ -1523,53 +1611,150 @@ var app = (function () {
     	}
     }
 
+    function cubicOut(t) {
+        const f = t - 1.0;
+        return f * f * f + 1.0;
+    }
+
+    function is_date(obj) {
+        return Object.prototype.toString.call(obj) === '[object Date]';
+    }
+
+    function get_interpolator(a, b) {
+        if (a === b || a !== a)
+            return () => a;
+        const type = typeof a;
+        if (type !== typeof b || Array.isArray(a) !== Array.isArray(b)) {
+            throw new Error('Cannot interpolate values of different type');
+        }
+        if (Array.isArray(a)) {
+            const arr = b.map((bi, i) => {
+                return get_interpolator(a[i], bi);
+            });
+            return t => arr.map(fn => fn(t));
+        }
+        if (type === 'object') {
+            if (!a || !b)
+                throw new Error('Object cannot be null');
+            if (is_date(a) && is_date(b)) {
+                a = a.getTime();
+                b = b.getTime();
+                const delta = b - a;
+                return t => new Date(a + t * delta);
+            }
+            const keys = Object.keys(b);
+            const interpolators = {};
+            keys.forEach(key => {
+                interpolators[key] = get_interpolator(a[key], b[key]);
+            });
+            return t => {
+                const result = {};
+                keys.forEach(key => {
+                    result[key] = interpolators[key](t);
+                });
+                return result;
+            };
+        }
+        if (type === 'number') {
+            const delta = b - a;
+            return t => a + t * delta;
+        }
+        throw new Error(`Cannot interpolate ${type} values`);
+    }
+    function tweened(value, defaults = {}) {
+        const store = writable(value);
+        let task;
+        let target_value = value;
+        function set(new_value, opts) {
+            if (value == null) {
+                store.set(value = new_value);
+                return Promise.resolve();
+            }
+            target_value = new_value;
+            let previous_task = task;
+            let started = false;
+            let { delay = 0, duration = 400, easing = identity, interpolate = get_interpolator } = assign(assign({}, defaults), opts);
+            if (duration === 0) {
+                if (previous_task) {
+                    previous_task.abort();
+                    previous_task = null;
+                }
+                store.set(value = target_value);
+                return Promise.resolve();
+            }
+            const start = now() + delay;
+            let fn;
+            task = loop(now => {
+                if (now < start)
+                    return true;
+                if (!started) {
+                    fn = interpolate(value, new_value);
+                    if (typeof duration === 'function')
+                        duration = duration(value, new_value);
+                    started = true;
+                }
+                if (previous_task) {
+                    previous_task.abort();
+                    previous_task = null;
+                }
+                const elapsed = now - start;
+                if (elapsed > duration) {
+                    store.set(value = new_value);
+                    return false;
+                }
+                // @ts-ignore
+                store.set(value = fn(easing(elapsed / duration)));
+                return true;
+            });
+            return task.promise;
+        }
+        return {
+            set,
+            update: (fn, opts) => set(fn(target_value, value), opts),
+            subscribe: store.subscribe
+        };
+    }
+
     /* App.svelte generated by Svelte v3.23.2 */
     const file$2 = "App.svelte";
 
-    // (13:2) <Round>
+    // (23:4) <Round {$rotate} margin="10">
     function create_default_slot(ctx) {
     	let arc0;
-    	let t0;
+    	let t;
     	let arc1;
-    	let t1;
-    	let arc2;
     	let current;
 
     	arc0 = new Arc({
-    			props: { from: "0", to: "90", color: "blue" },
+    			props: {
+    				from: "-45",
+    				to: "45",
+    				color: "blue",
+    				width: "8"
+    			},
     			$$inline: true
     		});
 
     	arc1 = new Arc({
     			props: {
-    				from: "90",
-    				to: "180",
-    				color: "red",
-    				width: "100",
-    				radius: "0"
+    				from: "135",
+    				to: "225",
+    				color: "orange",
+    				width: "8"
     			},
-    			$$inline: true
-    		});
-
-    	arc2 = new Arc({
-    			props: { from: "180", to: "280", color: "green" },
     			$$inline: true
     		});
 
     	const block = {
     		c: function create() {
     			create_component(arc0.$$.fragment);
-    			t0 = space();
+    			t = space();
     			create_component(arc1.$$.fragment);
-    			t1 = space();
-    			create_component(arc2.$$.fragment);
     		},
     		m: function mount(target, anchor) {
     			mount_component(arc0, target, anchor);
-    			insert_dev(target, t0, anchor);
+    			insert_dev(target, t, anchor);
     			mount_component(arc1, target, anchor);
-    			insert_dev(target, t1, anchor);
-    			mount_component(arc2, target, anchor);
     			current = true;
     		},
     		p: noop,
@@ -1577,21 +1762,17 @@ var app = (function () {
     			if (current) return;
     			transition_in(arc0.$$.fragment, local);
     			transition_in(arc1.$$.fragment, local);
-    			transition_in(arc2.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
     			transition_out(arc0.$$.fragment, local);
     			transition_out(arc1.$$.fragment, local);
-    			transition_out(arc2.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			destroy_component(arc0, detaching);
-    			if (detaching) detach_dev(t0);
+    			if (detaching) detach_dev(t);
     			destroy_component(arc1, detaching);
-    			if (detaching) detach_dev(t1);
-    			destroy_component(arc2, detaching);
     		}
     	};
 
@@ -1599,7 +1780,7 @@ var app = (function () {
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(13:2) <Round>",
+    		source: "(23:4) <Round {$rotate} margin=\\\"10\\\">",
     		ctx
     	});
 
@@ -1607,14 +1788,18 @@ var app = (function () {
     }
 
     function create_fragment$2(ctx) {
-    	let div1;
+    	let div2;
     	let div0;
+    	let a;
     	let t1;
+    	let div1;
     	let round;
     	let current;
 
     	round = new Round({
     			props: {
+    				$rotate: /*$rotate*/ ctx[0],
+    				margin: "10",
     				$$slots: { default: [create_default_slot] },
     				$$scope: { ctx }
     			},
@@ -1623,28 +1808,38 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			div1 = element("div");
+    			div2 = element("div");
     			div0 = element("div");
-    			div0.textContent = "somehow-circle";
+    			a = element("a");
+    			a.textContent = "somehow-circle";
     			t1 = space();
+    			div1 = element("div");
     			create_component(round.$$.fragment);
-    			add_location(div0, file$2, 10, 2, 85);
-    			add_location(div1, file$2, 8, 0, 76);
+    			attr_dev(a, "href", "https://github.com/spencermountain/somehow-circle");
+    			add_location(a, file$2, 18, 4, 287);
+    			add_location(div0, file$2, 17, 2, 277);
+    			attr_dev(div1, "class", "w8");
+    			add_location(div1, file$2, 21, 2, 443);
+    			attr_dev(div2, "class", "col");
+    			add_location(div2, file$2, 15, 0, 256);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, div1, anchor);
-    			append_dev(div1, div0);
-    			append_dev(div1, t1);
+    			insert_dev(target, div2, anchor);
+    			append_dev(div2, div0);
+    			append_dev(div0, a);
+    			append_dev(div2, t1);
+    			append_dev(div2, div1);
     			mount_component(round, div1, null);
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
     			const round_changes = {};
+    			if (dirty & /*$rotate*/ 1) round_changes.$rotate = /*$rotate*/ ctx[0];
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 4) {
     				round_changes.$$scope = { dirty, ctx };
     			}
 
@@ -1660,7 +1855,7 @@ var app = (function () {
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div1);
+    			if (detaching) detach_dev(div2);
     			destroy_component(round);
     		}
     	};
@@ -1677,6 +1872,10 @@ var app = (function () {
     }
 
     function instance$2($$self, $$props, $$invalidate) {
+    	let $rotate;
+    	const rotate = tweened(0, { duration: 400, easing: cubicOut });
+    	validate_store(rotate, "rotate");
+    	component_subscribe($$self, rotate, value => $$invalidate(0, $rotate = value));
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
@@ -1685,8 +1884,17 @@ var app = (function () {
 
     	let { $$slots = {}, $$scope } = $$props;
     	validate_slots("App", $$slots, []);
-    	$$self.$capture_state = () => ({ Round, Arc });
-    	return [];
+
+    	$$self.$capture_state = () => ({
+    		Round,
+    		Arc,
+    		tweened,
+    		cubicOut,
+    		rotate,
+    		$rotate
+    	});
+
+    	return [$rotate, rotate];
     }
 
     class App extends SvelteComponentDev {

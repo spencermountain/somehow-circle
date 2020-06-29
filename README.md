@@ -12,70 +12,28 @@
 
 **work in progress**
 
-a version of [somehow](https://github.com/spencermountain/somehow) that has two scales - a round one, and a radial one.
+a **svelte** component to draw circular infographics.
+
+- a version of [somehow](https://github.com/spencermountain/somehow) that has two scales - a round one, and a radial one.
 This lets you easily plot data into a pie-chart-like form, and automatically fit the scales to the data, and responsively fit the graph to the page.
 
 `npm i somehow-circle`
 
-```js
-const somehowCircle = require('somehow-circle')
-let w = somehowCircle()
+```html
+<script>
+import { Round, Arc } from 'somehow-circle'
+</script>
 
-// simple circle
-w.circle().radius(50)
-
-// simple arcs
-w.arc()
-  .from(0)
-  .to(20)
-  .radius(10)
-  .color('green')
-  .width(5)
-w.arc()
-  .from(0)
-  .to(25)
-  .color('red')
-  .radius(20)
-  .width(10)
-
-// complex, wavey line
-let data = [
-  { x: 3, r: 2 },
-  { x: 13, r: 22 },
-  { x: 23, r: 12 },
-  { x: 33, r: 12 },
-  { x: 53, r: 19 },
-  { x: 63, r: 22 },
-  { x: 73, r: 12 }
-]
-w.line()
-  .set(data)
-  .width(5)
-  .opacity(0.5)
-
-// some labels
-w.label('95%')
-  .at(95)
-  .min(10)
-w.label('25%')
-  .at(25)
-  .min(10)
-w.label('50%')
-  .at(50)
-  .min(10)
-
-// w.rotate(90)
-
-w.fit()
-w.xScale.fit(0, 100)
-
-document.body.innerHTML = w.build()
+<div style="width:30rem; height:30rem;">
+  <Round>
+    <Arc from="0" to="90" color="blue" />
+    <Arc from="90" to="180" color="red" width="10" radius="50" />
+    <Arc from="180" to="280" color="green" />
+  </Round>
+</div>
 ```
 
-![image](https://user-images.githubusercontent.com/399657/66593813-befd3400-eb65-11e9-9397-2bc92214ee5d.png)
-
-
-running `.build()` returns html-strings by default, but the library uses Jason Miller's [htm](https://github.com/developit/htm) library so can call `.bind(React.createElement)` and return React Components.
+the svg will resize responsively to fit your container.
 
 work-in-progress!
 
@@ -84,5 +42,5 @@ work-in-progress!
 * [somehow-ticks](https://github.com/spencermountain/somehow-ticks)
 * [somehow-calendar](https://github.com/spencermountain/somehow-calendar)
 * [somehow-maps](https://github.com/spencermountain/somehow-maps)
-* 
+  
 MIT

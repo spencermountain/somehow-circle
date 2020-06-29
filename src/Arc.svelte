@@ -6,6 +6,7 @@
   export let from = 0
   export let radius = 80
   export let width = 20
+  export let label = ''
   to = Number(to)
   from = Number(from)
   radius = Number(radius)
@@ -20,7 +21,8 @@
       to: to,
       from: from,
       radius: radius,
-      width: width
+      width: width,
+      label: label
     })
     return arr
   })
