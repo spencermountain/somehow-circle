@@ -1,0 +1,63 @@
+<script>
+  import { onMount } from 'svelte'
+  import layout from './layout'
+  import { arcs, lines, labels } from './stores.js'
+
+  export let radius = 500
+  export let rotate = 0
+  export let from = 0
+  export let to = 360
+  export let margin = 0
+  radius = Number(radius)
+
+  let world = {
+    radius: radius,
+    rotate: Number(rotate),
+    from: Number(from),
+    to: Number(to),
+    margin: Number(margin)
+  }
+  let shapes = []
+  onMount(() => {
+    shapes = layout($arcs, $lines, $labels, world)
+    // console.log(shapes)
+  })
+</script>
+
+<style>
+  svg {
+    border: 1px solid grey;
+  }
+</style>
+
+<div class="container">
+  <svg viewBox="-50,-50,100,100" shape-rendering="geometricPrecision">
+    {#each shapes as o}
+      {#if o.type === 'arc'}
+        <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
+      {/if}
+      {#if o.type === 'line'}
+        <path
+          class="link"
+          d={o.path}
+          stroke={o.color}
+          fill={o.color}
+          style=""
+          stroke-width={o.width} />
+      {/if}
+      {#if o.type === 'label'}
+        <text
+          x={o.x}
+          y={o.y}
+          transform="rotate({o.angle},{o.x},{o.y})"
+          font-size={o.size}
+          text-anchor={o.align}
+          fill={o.color}>
+          {o.text}
+        </text>
+      {/if}
+    {/each}
+  </svg>
+
+</div>
+<slot />
