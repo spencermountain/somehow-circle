@@ -145,6 +145,9 @@ var app = (function () {
     function space() {
         return text(' ');
     }
+    function empty() {
+        return text('');
+    }
     function attr(node, attribute, value) {
         if (value == null)
             node.removeAttribute(attribute);
@@ -265,12 +268,6 @@ var app = (function () {
             block.o(local);
         }
     }
-
-    const globals = (typeof window !== 'undefined'
-        ? window
-        : typeof globalThis !== 'undefined'
-            ? globalThis
-            : global);
     function create_component(block) {
         block && block.c();
     }
@@ -980,6 +977,149 @@ var app = (function () {
       return arc;
     }
 
+    function Linear(context) {
+      this._context = context;
+    }
+
+    Linear.prototype = {
+      areaStart: function() {
+        this._line = 0;
+      },
+      areaEnd: function() {
+        this._line = NaN;
+      },
+      lineStart: function() {
+        this._point = 0;
+      },
+      lineEnd: function() {
+        if (this._line || (this._line !== 0 && this._point === 1)) this._context.closePath();
+        this._line = 1 - this._line;
+      },
+      point: function(x, y) {
+        x = +x, y = +y;
+        switch (this._point) {
+          case 0: this._point = 1; this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y); break;
+          case 1: this._point = 2; // proceed
+          default: this._context.lineTo(x, y); break;
+        }
+      }
+    };
+
+    function curveLinear(context) {
+      return new Linear(context);
+    }
+
+    function x(p) {
+      return p[0];
+    }
+
+    function y(p) {
+      return p[1];
+    }
+
+    function line() {
+      var x$1 = x,
+          y$1 = y,
+          defined = constant(true),
+          context = null,
+          curve = curveLinear,
+          output = null;
+
+      function line(data) {
+        var i,
+            n = data.length,
+            d,
+            defined0 = false,
+            buffer;
+
+        if (context == null) output = curve(buffer = path());
+
+        for (i = 0; i <= n; ++i) {
+          if (!(i < n && defined(d = data[i], i, data)) === defined0) {
+            if (defined0 = !defined0) output.lineStart();
+            else output.lineEnd();
+          }
+          if (defined0) output.point(+x$1(d, i, data), +y$1(d, i, data));
+        }
+
+        if (buffer) return output = null, buffer + "" || null;
+      }
+
+      line.x = function(_) {
+        return arguments.length ? (x$1 = typeof _ === "function" ? _ : constant(+_), line) : x$1;
+      };
+
+      line.y = function(_) {
+        return arguments.length ? (y$1 = typeof _ === "function" ? _ : constant(+_), line) : y$1;
+      };
+
+      line.defined = function(_) {
+        return arguments.length ? (defined = typeof _ === "function" ? _ : constant(!!_), line) : defined;
+      };
+
+      line.curve = function(_) {
+        return arguments.length ? (curve = _, context != null && (output = curve(context)), line) : curve;
+      };
+
+      line.context = function(_) {
+        return arguments.length ? (_ == null ? context = output = null : output = curve(context = _), line) : context;
+      };
+
+      return line;
+    }
+
+    var curveRadialLinear = curveRadial(curveLinear);
+
+    function Radial(curve) {
+      this._curve = curve;
+    }
+
+    Radial.prototype = {
+      areaStart: function() {
+        this._curve.areaStart();
+      },
+      areaEnd: function() {
+        this._curve.areaEnd();
+      },
+      lineStart: function() {
+        this._curve.lineStart();
+      },
+      lineEnd: function() {
+        this._curve.lineEnd();
+      },
+      point: function(a, r) {
+        this._curve.point(r * Math.sin(a), r * -Math.cos(a));
+      }
+    };
+
+    function curveRadial(curve) {
+
+      function radial(context) {
+        return new Radial(curve(context));
+      }
+
+      radial._curve = curve;
+
+      return radial;
+    }
+
+    function lineRadial(l) {
+      var c = l.curve;
+
+      l.angle = l.x, delete l.x;
+      l.radius = l.y, delete l.y;
+
+      l.curve = function(_) {
+        return arguments.length ? c(curveRadial(_)) : c()._curve;
+      };
+
+      return l;
+    }
+
+    function lineRadial$1() {
+      return lineRadial(line().curve(curveRadialLinear));
+    }
+
     function sign(x) {
       return x < 0 ? -1 : 1;
     }
@@ -1077,28 +1217,8 @@ var app = (function () {
       bezierCurveTo: function(x1, y1, x2, y2, x, y) { this._context.bezierCurveTo(y1, x1, y2, x2, y, x); }
     };
 
-    //export let name = ''
-    let q = Math.PI / 2;
-    const trig = [-Math.PI, Math.PI];
-
-    const maxRadius = function (items) {
-      let max = 0;
-      items.forEach((o) => {
-        let r = o.radius + o.width;
-        if (r > max) {
-          max = r;
-        }
-      });
-      return max
-    };
-
-    const layout = function (items, world) {
-      let radius = maxRadius(items);
-      let xScale = scaleLinear({ minmax: [world.from, world.to], world: trig });
-      let rotate = 0; //toRadian(world.rotate)
-      console.log(world.rotate);
-      let rScale = scaleLinear({ minmax: [0, radius], world: [0, 50] });
-      let shapes = items.map((obj) => {
+    const drawArcs = function (arcs, xScale, rScale, q, rotate) {
+      return arcs.map((obj) => {
         let r = rScale(obj.radius);
         let path = arc()({
           startAngle: xScale(obj.to) - q + rotate,
@@ -1107,28 +1227,112 @@ var app = (function () {
           outerRadius: r + rScale(obj.width)
         });
         return {
+          type: 'arc',
           path: path,
           color: obj.color
         }
+      })
+    };
+
+    const drawLines = function (lines, xScale, rScale, q, rotate) {
+      // draw lines
+      return lines.map((obj) => {
+        let data = [
+          { angle: obj.angle, radius: obj.radius },
+          { angle: obj.angle, radius: obj.length + obj.radius }
+        ];
+        let path = lineRadial$1()
+          .angle((d) => xScale(d.angle) - q + rotate)
+          .radius((d) => rScale(d.radius));
+        return {
+          type: 'line',
+          path: path(data),
+          color: obj.color,
+          width: obj.width
+        }
+      })
+    };
+
+    const drawTicks = function (ticks, xScale, rScale, q, rotate) {
+      return ticks.map((obj) => {
+        let r = rScale(obj.radius);
+        let path = arc()({
+          startAngle: xScale(obj.to) - q + rotate,
+          endAngle: xScale(obj.from) - q + rotate,
+          innerRadius: r,
+          outerRadius: r + rScale(obj.width)
+        });
+        return {
+          type: 'ticks',
+          path: path,
+          color: obj.color
+        }
+      })
+    };
+
+    //export let name = ''
+
+    let q = Math.PI / 2;
+    const trig = [-Math.PI, Math.PI];
+
+    function toRadian(deg) {
+      var pi = Math.PI;
+      return deg * (pi / 180)
+    }
+
+    const maxRadius = function (arcs, lines) {
+      let max = 0;
+      arcs.forEach((o) => {
+        let r = o.radius + o.width;
+        if (r > max) {
+          max = r;
+        }
       });
+      lines.forEach((l) => {
+        let r = l.radius + l.length + l.width;
+        if (r > max) {
+          max = r;
+        }
+      });
+      return max
+    };
+
+    const layout = function (arcs, lines, ticks, world) {
+      let xScale = scaleLinear({ minmax: [world.from, world.to], world: trig });
+      let rotate = toRadian(world.rotate);
+      // console.log(world.rotate)
+
+      let maxR = maxRadius(arcs, lines);
+      maxR = maxR + world.margin;
+      let rScale = scaleLinear({ minmax: [0, maxR], world: [0, 50] });
+
+      // draw arcs
+      let shapes = drawArcs(arcs, xScale, rScale, q, rotate);
+      // draw lines
+      shapes = shapes.concat(drawLines(lines, xScale, rScale, q, rotate));
+      // draw ticks
+      shapes = shapes.concat(drawTicks(ticks, xScale, rScale, q, rotate));
+      console.log(shapes);
       return shapes
     };
 
-    const items = writable([]);
+    const arcs = writable([]);
+    const lines = writable([]);
+    const ticks = writable([]);
+    //
+    // export const _rotate = 0
 
     /* src/Round.svelte generated by Svelte v3.23.2 */
-
-    const { console: console_1 } = globals;
     const file = "src/Round.svelte";
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[10] = list[i];
+    	child_ctx[12] = list[i];
     	return child_ctx;
     }
 
-    // (44:4) {#each shapes as o}
-    function create_each_block(ctx) {
+    // (40:6) {#if o.type === 'arc'}
+    function create_if_block_2(ctx) {
     	let path;
     	let path_d_value;
     	let path_fill_value;
@@ -1138,21 +1342,21 @@ var app = (function () {
     		c: function create() {
     			path = svg_element("path");
     			attr_dev(path, "class", "link");
-    			attr_dev(path, "d", path_d_value = /*o*/ ctx[10].path);
+    			attr_dev(path, "d", path_d_value = /*o*/ ctx[12].path);
     			attr_dev(path, "stroke", "none");
-    			attr_dev(path, "fill", path_fill_value = /*o*/ ctx[10].color);
+    			attr_dev(path, "fill", path_fill_value = /*o*/ ctx[12].color);
     			attr_dev(path, "stroke-width", path_stroke_width_value = 1);
-    			add_location(path, file, 44, 6, 904);
+    			add_location(path, file, 40, 8, 882);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, path, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*shapes*/ 2 && path_d_value !== (path_d_value = /*o*/ ctx[10].path)) {
+    			if (dirty & /*shapes*/ 2 && path_d_value !== (path_d_value = /*o*/ ctx[12].path)) {
     				attr_dev(path, "d", path_d_value);
     			}
 
-    			if (dirty & /*shapes*/ 2 && path_fill_value !== (path_fill_value = /*o*/ ctx[10].color)) {
+    			if (dirty & /*shapes*/ 2 && path_fill_value !== (path_fill_value = /*o*/ ctx[12].color)) {
     				attr_dev(path, "fill", path_fill_value);
     			}
     		},
@@ -1163,9 +1367,195 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
+    		id: create_if_block_2.name,
+    		type: "if",
+    		source: "(40:6) {#if o.type === 'arc'}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (43:6) {#if o.type === 'line'}
+    function create_if_block_1(ctx) {
+    	let path;
+    	let path_d_value;
+    	let path_stroke_value;
+    	let path_fill_value;
+    	let path_stroke_width_value;
+
+    	const block = {
+    		c: function create() {
+    			path = svg_element("path");
+    			attr_dev(path, "class", "link");
+    			attr_dev(path, "d", path_d_value = /*o*/ ctx[12].path);
+    			attr_dev(path, "stroke", path_stroke_value = /*o*/ ctx[12].color);
+    			attr_dev(path, "fill", path_fill_value = /*o*/ ctx[12].color);
+    			attr_dev(path, "stroke-width", path_stroke_width_value = /*o*/ ctx[12].width);
+    			add_location(path, file, 43, 8, 1020);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, path, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*shapes*/ 2 && path_d_value !== (path_d_value = /*o*/ ctx[12].path)) {
+    				attr_dev(path, "d", path_d_value);
+    			}
+
+    			if (dirty & /*shapes*/ 2 && path_stroke_value !== (path_stroke_value = /*o*/ ctx[12].color)) {
+    				attr_dev(path, "stroke", path_stroke_value);
+    			}
+
+    			if (dirty & /*shapes*/ 2 && path_fill_value !== (path_fill_value = /*o*/ ctx[12].color)) {
+    				attr_dev(path, "fill", path_fill_value);
+    			}
+
+    			if (dirty & /*shapes*/ 2 && path_stroke_width_value !== (path_stroke_width_value = /*o*/ ctx[12].width)) {
+    				attr_dev(path, "stroke-width", path_stroke_width_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(path);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1.name,
+    		type: "if",
+    		source: "(43:6) {#if o.type === 'line'}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (52:6) {#if o.type === 'ticks'}
+    function create_if_block(ctx) {
+    	let path;
+    	let path_d_value;
+    	let path_fill_value;
+    	let path_stroke_width_value;
+
+    	const block = {
+    		c: function create() {
+    			path = svg_element("path");
+    			attr_dev(path, "class", "link");
+    			attr_dev(path, "d", path_d_value = /*o*/ ctx[12].path);
+    			attr_dev(path, "stroke", "none");
+    			attr_dev(path, "fill", path_fill_value = /*o*/ ctx[12].color);
+    			attr_dev(path, "stroke-width", path_stroke_width_value = 1);
+    			add_location(path, file, 52, 8, 1228);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, path, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*shapes*/ 2 && path_d_value !== (path_d_value = /*o*/ ctx[12].path)) {
+    				attr_dev(path, "d", path_d_value);
+    			}
+
+    			if (dirty & /*shapes*/ 2 && path_fill_value !== (path_fill_value = /*o*/ ctx[12].color)) {
+    				attr_dev(path, "fill", path_fill_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(path);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block.name,
+    		type: "if",
+    		source: "(52:6) {#if o.type === 'ticks'}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (39:4) {#each shapes as o}
+    function create_each_block(ctx) {
+    	let if_block0_anchor;
+    	let if_block1_anchor;
+    	let if_block2_anchor;
+    	let if_block0 = /*o*/ ctx[12].type === "arc" && create_if_block_2(ctx);
+    	let if_block1 = /*o*/ ctx[12].type === "line" && create_if_block_1(ctx);
+    	let if_block2 = /*o*/ ctx[12].type === "ticks" && create_if_block(ctx);
+
+    	const block = {
+    		c: function create() {
+    			if (if_block0) if_block0.c();
+    			if_block0_anchor = empty();
+    			if (if_block1) if_block1.c();
+    			if_block1_anchor = empty();
+    			if (if_block2) if_block2.c();
+    			if_block2_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			if (if_block0) if_block0.m(target, anchor);
+    			insert_dev(target, if_block0_anchor, anchor);
+    			if (if_block1) if_block1.m(target, anchor);
+    			insert_dev(target, if_block1_anchor, anchor);
+    			if (if_block2) if_block2.m(target, anchor);
+    			insert_dev(target, if_block2_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (/*o*/ ctx[12].type === "arc") {
+    				if (if_block0) {
+    					if_block0.p(ctx, dirty);
+    				} else {
+    					if_block0 = create_if_block_2(ctx);
+    					if_block0.c();
+    					if_block0.m(if_block0_anchor.parentNode, if_block0_anchor);
+    				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
+
+    			if (/*o*/ ctx[12].type === "line") {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+    				} else {
+    					if_block1 = create_if_block_1(ctx);
+    					if_block1.c();
+    					if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+
+    			if (/*o*/ ctx[12].type === "ticks") {
+    				if (if_block2) {
+    					if_block2.p(ctx, dirty);
+    				} else {
+    					if_block2 = create_if_block(ctx);
+    					if_block2.c();
+    					if_block2.m(if_block2_anchor.parentNode, if_block2_anchor);
+    				}
+    			} else if (if_block2) {
+    				if_block2.d(1);
+    				if_block2 = null;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (if_block0) if_block0.d(detaching);
+    			if (detaching) detach_dev(if_block0_anchor);
+    			if (if_block1) if_block1.d(detaching);
+    			if (detaching) detach_dev(if_block1_anchor);
+    			if (if_block2) if_block2.d(detaching);
+    			if (detaching) detach_dev(if_block2_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(44:4) {#each shapes as o}",
+    		source: "(39:4) {#each shapes as o}",
     		ctx
     	});
 
@@ -1205,9 +1595,9 @@ var app = (function () {
     			attr_dev(svg, "width", svg_width_value = /*radius*/ ctx[0] * 2);
     			attr_dev(svg, "height", svg_height_value = /*radius*/ ctx[0] * 2);
     			attr_dev(svg, "class", "svelte-1aem4xz");
-    			add_location(svg, file, 42, 2, 803);
+    			add_location(svg, file, 37, 2, 750);
     			attr_dev(div, "class", "container");
-    			add_location(div, file, 41, 0, 777);
+    			add_location(div, file, 36, 0, 724);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1296,9 +1686,15 @@ var app = (function () {
     }
 
     function instance($$self, $$props, $$invalidate) {
-    	let $items;
-    	validate_store(items, "items");
-    	component_subscribe($$self, items, $$value => $$invalidate(8, $items = $$value));
+    	let $arcs;
+    	let $lines;
+    	let $ticks;
+    	validate_store(arcs, "arcs");
+    	component_subscribe($$self, arcs, $$value => $$invalidate(8, $arcs = $$value));
+    	validate_store(lines, "lines");
+    	component_subscribe($$self, lines, $$value => $$invalidate(9, $lines = $$value));
+    	validate_store(ticks, "ticks");
+    	component_subscribe($$self, ticks, $$value => $$invalidate(10, $ticks = $$value));
     	let { radius = 500 } = $$props;
     	let { rotate = 0 } = $$props;
     	let { from = 0 } = $$props;
@@ -1317,20 +1713,13 @@ var app = (function () {
     	let shapes = [];
 
     	onMount(() => {
-    		$$invalidate(1, shapes = layout($items, world));
-    	});
-
-    	// rotate = writable(rotate)
-    	console.log(rotate);
-
-    	rotate.subscribe(val => {
-    		console.log(val);
-    	});
+    		$$invalidate(1, shapes = layout($arcs, $lines, $ticks, world));
+    	}); // console.log(shapes)
 
     	const writable_props = ["radius", "rotate", "from", "to", "margin"];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<Round> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Round> was created with unknown prop '${key}'`);
     	});
 
     	let { $$slots = {}, $$scope } = $$props;
@@ -1352,7 +1741,9 @@ var app = (function () {
     		scale: scaleLinear,
     		colors,
     		layout,
-    		items,
+    		arcs,
+    		lines,
+    		ticks,
     		radius,
     		rotate,
     		from,
@@ -1360,7 +1751,9 @@ var app = (function () {
     		margin,
     		world,
     		shapes,
-    		$items
+    		$arcs,
+    		$lines,
+    		$ticks
     	});
 
     	$$self.$inject_state = $$props => {
@@ -1450,7 +1843,7 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			div = element("div");
-    			add_location(div, file$1, 30, 0, 580);
+    			add_location(div, file$1, 28, 0, 534);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1482,7 +1875,6 @@ var app = (function () {
     	let { from = 0 } = $$props;
     	let { radius = 80 } = $$props;
     	let { width = 20 } = $$props;
-    	let { label = "" } = $$props;
     	to = Number(to);
     	from = Number(from);
     	radius = Number(radius);
@@ -1490,12 +1882,12 @@ var app = (function () {
     	let { color = "blue" } = $$props;
     	color = colors[color] || color;
 
-    	items.update(arr => {
-    		arr.push({ color, to, from, radius, width, label });
+    	arcs.update(arr => {
+    		arr.push({ color, to, from, radius, width });
     		return arr;
     	});
 
-    	const writable_props = ["to", "from", "radius", "width", "label", "color"];
+    	const writable_props = ["to", "from", "radius", "width", "color"];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Arc> was created with unknown prop '${key}'`);
@@ -1509,19 +1901,17 @@ var app = (function () {
     		if ("from" in $$props) $$invalidate(1, from = $$props.from);
     		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
     		if ("width" in $$props) $$invalidate(3, width = $$props.width);
-    		if ("label" in $$props) $$invalidate(5, label = $$props.label);
     		if ("color" in $$props) $$invalidate(4, color = $$props.color);
     	};
 
     	$$self.$capture_state = () => ({
     		getContext,
-    		items,
+    		arcs,
     		colors,
     		to,
     		from,
     		radius,
     		width,
-    		label,
     		color
     	});
 
@@ -1530,7 +1920,6 @@ var app = (function () {
     		if ("from" in $$props) $$invalidate(1, from = $$props.from);
     		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
     		if ("width" in $$props) $$invalidate(3, width = $$props.width);
-    		if ("label" in $$props) $$invalidate(5, label = $$props.label);
     		if ("color" in $$props) $$invalidate(4, color = $$props.color);
     	};
 
@@ -1538,7 +1927,7 @@ var app = (function () {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [to, from, radius, width, color, label];
+    	return [to, from, radius, width, color];
     }
 
     class Arc extends SvelteComponentDev {
@@ -1550,7 +1939,6 @@ var app = (function () {
     			from: 1,
     			radius: 2,
     			width: 3,
-    			label: 5,
     			color: 4
     		});
 
@@ -1594,20 +1982,329 @@ var app = (function () {
     		throw new Error("<Arc>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
-    	get label() {
-    		throw new Error("<Arc>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set label(value) {
-    		throw new Error("<Arc>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
     	get color() {
     		throw new Error("<Arc>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set color(value) {
     		throw new Error("<Arc>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src/Line.svelte generated by Svelte v3.23.2 */
+    const file$2 = "src/Line.svelte";
+
+    function create_fragment$2(ctx) {
+    	let div;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			add_location(div, file$2, 24, 0, 493);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    		},
+    		p: noop,
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$2.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$2($$self, $$props, $$invalidate) {
+    	let { angle = 0 } = $$props;
+    	let { length = 40 } = $$props;
+    	let { radius = 0 } = $$props;
+    	let { width = 0.1 } = $$props;
+    	let { color = "grey" } = $$props;
+    	color = colors[color] || color;
+
+    	lines.update(arr => {
+    		arr.push({
+    			color,
+    			angle: Number(angle),
+    			radius: Number(radius),
+    			length: Number(length),
+    			width: Number(width)
+    		});
+
+    		return arr;
+    	});
+
+    	const writable_props = ["angle", "length", "radius", "width", "color"];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Line> was created with unknown prop '${key}'`);
+    	});
+
+    	let { $$slots = {}, $$scope } = $$props;
+    	validate_slots("Line", $$slots, []);
+
+    	$$self.$set = $$props => {
+    		if ("angle" in $$props) $$invalidate(1, angle = $$props.angle);
+    		if ("length" in $$props) $$invalidate(2, length = $$props.length);
+    		if ("radius" in $$props) $$invalidate(3, radius = $$props.radius);
+    		if ("width" in $$props) $$invalidate(4, width = $$props.width);
+    		if ("color" in $$props) $$invalidate(0, color = $$props.color);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		getContext,
+    		lines,
+    		colors,
+    		angle,
+    		length,
+    		radius,
+    		width,
+    		color
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ("angle" in $$props) $$invalidate(1, angle = $$props.angle);
+    		if ("length" in $$props) $$invalidate(2, length = $$props.length);
+    		if ("radius" in $$props) $$invalidate(3, radius = $$props.radius);
+    		if ("width" in $$props) $$invalidate(4, width = $$props.width);
+    		if ("color" in $$props) $$invalidate(0, color = $$props.color);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [color, angle, length, radius, width];
+    }
+
+    class Line extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, {
+    			angle: 1,
+    			length: 2,
+    			radius: 3,
+    			width: 4,
+    			color: 0
+    		});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Line",
+    			options,
+    			id: create_fragment$2.name
+    		});
+    	}
+
+    	get angle() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set angle(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get length() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set length(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get radius() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set radius(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get width() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set width(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get color() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set color(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src/Ticks.svelte generated by Svelte v3.23.2 */
+    const file$3 = "src/Ticks.svelte";
+
+    function create_fragment$3(ctx) {
+    	let div;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			add_location(div, file$3, 28, 0, 540);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    		},
+    		p: noop,
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$3.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	let { to = 90 } = $$props;
+    	let { from = 0 } = $$props;
+    	let { radius = 80 } = $$props;
+    	let { width = 1 } = $$props;
+    	to = Number(to);
+    	from = Number(from);
+    	radius = Number(radius);
+    	width = Number(width);
+    	let { color = "lightgrey" } = $$props;
+    	color = colors[color] || color;
+
+    	ticks.update(arr => {
+    		arr.push({ color, to, from, radius, width });
+    		return arr;
+    	});
+
+    	const writable_props = ["to", "from", "radius", "width", "color"];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Ticks> was created with unknown prop '${key}'`);
+    	});
+
+    	let { $$slots = {}, $$scope } = $$props;
+    	validate_slots("Ticks", $$slots, []);
+
+    	$$self.$set = $$props => {
+    		if ("to" in $$props) $$invalidate(0, to = $$props.to);
+    		if ("from" in $$props) $$invalidate(1, from = $$props.from);
+    		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
+    		if ("width" in $$props) $$invalidate(3, width = $$props.width);
+    		if ("color" in $$props) $$invalidate(4, color = $$props.color);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		getContext,
+    		ticks,
+    		colors,
+    		to,
+    		from,
+    		radius,
+    		width,
+    		color
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ("to" in $$props) $$invalidate(0, to = $$props.to);
+    		if ("from" in $$props) $$invalidate(1, from = $$props.from);
+    		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
+    		if ("width" in $$props) $$invalidate(3, width = $$props.width);
+    		if ("color" in $$props) $$invalidate(4, color = $$props.color);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [to, from, radius, width, color];
+    }
+
+    class Ticks extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {
+    			to: 0,
+    			from: 1,
+    			radius: 2,
+    			width: 3,
+    			color: 4
+    		});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Ticks",
+    			options,
+    			id: create_fragment$3.name
+    		});
+    	}
+
+    	get to() {
+    		throw new Error("<Ticks>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set to(value) {
+    		throw new Error("<Ticks>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get from() {
+    		throw new Error("<Ticks>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set from(value) {
+    		throw new Error("<Ticks>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get radius() {
+    		throw new Error("<Ticks>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set radius(value) {
+    		throw new Error("<Ticks>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get width() {
+    		throw new Error("<Ticks>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set width(value) {
+    		throw new Error("<Ticks>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get color() {
+    		throw new Error("<Ticks>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set color(value) {
+    		throw new Error("<Ticks>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
     }
 
@@ -1716,13 +2413,19 @@ var app = (function () {
     }
 
     /* App.svelte generated by Svelte v3.23.2 */
-    const file$2 = "App.svelte";
+    const file$4 = "App.svelte";
 
-    // (23:4) <Round {$rotate} margin="10">
+    // (22:4) <Round rotate="0" margin="10">
     function create_default_slot(ctx) {
     	let arc0;
-    	let t;
+    	let t0;
     	let arc1;
+    	let t1;
+    	let arc2;
+    	let t2;
+    	let line;
+    	let t3;
+    	let ticks;
     	let current;
 
     	arc0 = new Arc({
@@ -1745,16 +2448,45 @@ var app = (function () {
     			$$inline: true
     		});
 
+    	arc2 = new Arc({
+    			props: {
+    				from: "-10",
+    				to: "-5",
+    				color: "red",
+    				width: "8"
+    			},
+    			$$inline: true
+    		});
+
+    	line = new Line({ props: { length: "70" }, $$inline: true });
+
+    	ticks = new Ticks({
+    			props: { from: "-45", to: "45", radius: "70" },
+    			$$inline: true
+    		});
+
     	const block = {
     		c: function create() {
     			create_component(arc0.$$.fragment);
-    			t = space();
+    			t0 = space();
     			create_component(arc1.$$.fragment);
+    			t1 = space();
+    			create_component(arc2.$$.fragment);
+    			t2 = space();
+    			create_component(line.$$.fragment);
+    			t3 = space();
+    			create_component(ticks.$$.fragment);
     		},
     		m: function mount(target, anchor) {
     			mount_component(arc0, target, anchor);
-    			insert_dev(target, t, anchor);
+    			insert_dev(target, t0, anchor);
     			mount_component(arc1, target, anchor);
+    			insert_dev(target, t1, anchor);
+    			mount_component(arc2, target, anchor);
+    			insert_dev(target, t2, anchor);
+    			mount_component(line, target, anchor);
+    			insert_dev(target, t3, anchor);
+    			mount_component(ticks, target, anchor);
     			current = true;
     		},
     		p: noop,
@@ -1762,17 +2494,29 @@ var app = (function () {
     			if (current) return;
     			transition_in(arc0.$$.fragment, local);
     			transition_in(arc1.$$.fragment, local);
+    			transition_in(arc2.$$.fragment, local);
+    			transition_in(line.$$.fragment, local);
+    			transition_in(ticks.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
     			transition_out(arc0.$$.fragment, local);
     			transition_out(arc1.$$.fragment, local);
+    			transition_out(arc2.$$.fragment, local);
+    			transition_out(line.$$.fragment, local);
+    			transition_out(ticks.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			destroy_component(arc0, detaching);
-    			if (detaching) detach_dev(t);
+    			if (detaching) detach_dev(t0);
     			destroy_component(arc1, detaching);
+    			if (detaching) detach_dev(t1);
+    			destroy_component(arc2, detaching);
+    			if (detaching) detach_dev(t2);
+    			destroy_component(line, detaching);
+    			if (detaching) detach_dev(t3);
+    			destroy_component(ticks, detaching);
     		}
     	};
 
@@ -1780,14 +2524,14 @@ var app = (function () {
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(23:4) <Round {$rotate} margin=\\\"10\\\">",
+    		source: "(22:4) <Round rotate=\\\"0\\\" margin=\\\"10\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$2(ctx) {
+    function create_fragment$4(ctx) {
     	let div2;
     	let div0;
     	let a;
@@ -1798,7 +2542,7 @@ var app = (function () {
 
     	round = new Round({
     			props: {
-    				$rotate: /*$rotate*/ ctx[0],
+    				rotate: "0",
     				margin: "10",
     				$$slots: { default: [create_default_slot] },
     				$$scope: { ctx }
@@ -1816,12 +2560,12 @@ var app = (function () {
     			div1 = element("div");
     			create_component(round.$$.fragment);
     			attr_dev(a, "href", "https://github.com/spencermountain/somehow-circle");
-    			add_location(a, file$2, 18, 4, 287);
-    			add_location(div0, file$2, 17, 2, 277);
+    			add_location(a, file$4, 18, 4, 300);
+    			add_location(div0, file$4, 17, 2, 290);
     			attr_dev(div1, "class", "w8");
-    			add_location(div1, file$2, 21, 2, 443);
+    			add_location(div1, file$4, 20, 2, 390);
     			attr_dev(div2, "class", "col");
-    			add_location(div2, file$2, 15, 0, 256);
+    			add_location(div2, file$4, 15, 0, 269);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1837,9 +2581,8 @@ var app = (function () {
     		},
     		p: function update(ctx, [dirty]) {
     			const round_changes = {};
-    			if (dirty & /*$rotate*/ 1) round_changes.$rotate = /*$rotate*/ ctx[0];
 
-    			if (dirty & /*$$scope*/ 4) {
+    			if (dirty & /*$$scope*/ 2) {
     				round_changes.$$scope = { dirty, ctx };
     			}
 
@@ -1862,7 +2605,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$2.name,
+    		id: create_fragment$4.name,
     		type: "component",
     		source: "",
     		ctx
@@ -1871,11 +2614,8 @@ var app = (function () {
     	return block;
     }
 
-    function instance$2($$self, $$props, $$invalidate) {
-    	let $rotate;
+    function instance$4($$self, $$props, $$invalidate) {
     	const rotate = tweened(0, { duration: 400, easing: cubicOut });
-    	validate_store(rotate, "rotate");
-    	component_subscribe($$self, rotate, value => $$invalidate(0, $rotate = value));
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
@@ -1888,43 +2628,32 @@ var app = (function () {
     	$$self.$capture_state = () => ({
     		Round,
     		Arc,
+    		Line,
+    		Ticks,
     		tweened,
     		cubicOut,
-    		rotate,
-    		$rotate
+    		rotate
     	});
 
-    	return [$rotate, rotate];
+    	return [];
     }
 
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, {});
+    		init(this, options, instance$4, create_fragment$4, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "App",
     			options,
-    			id: create_fragment$2.name
+    			id: create_fragment$4.name
     		});
     	}
     }
 
-    let user = '';
-    // wire-in query params
-    const URLSearchParams = window.URLSearchParams;
-    if (typeof URLSearchParams !== undefined) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const myParam = urlParams.get('user');
-      if (myParam) {
-        user = myParam;
-      }
-    }
-
     const app = new App({
-      target: document.body,
-      props: { user: user }
+      target: document.body
     });
 
     return app;

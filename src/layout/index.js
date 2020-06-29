@@ -1,20 +1,27 @@
 //export let name = ''
-import * as d3Shape from 'd3-shape'
 import scale from '../lib/scale'
+import drawArcs from './drawArcs'
+import drawLines from './drawLines'
+import drawTicks from './drawTicks'
+
 let q = Math.PI / 2
 const trig = [-Math.PI, Math.PI]
-// const trig = [-0.5 * Math.PI, 0.5 * Math.PI]
-// const trig = [0, 1]
 
 function toRadian(deg) {
   var pi = Math.PI
   return deg * (pi / 180)
 }
 
-const maxRadius = function (items) {
+const maxRadius = function (arcs, lines) {
   let max = 0
-  items.forEach((o) => {
+  arcs.forEach((o) => {
     let r = o.radius + o.width
+    if (r > max) {
+      max = r
+    }
+  })
+  lines.forEach((l) => {
+    let r = l.radius + l.length + l.width
     if (r > max) {
       max = r
     }
@@ -22,25 +29,22 @@ const maxRadius = function (items) {
   return max
 }
 
-const layout = function (items, world) {
-  let radius = maxRadius(items)
+const layout = function (arcs, lines, ticks, world) {
   let xScale = scale({ minmax: [world.from, world.to], world: trig })
-  let rotate = 0 //toRadian(world.rotate)
-  console.log(world.rotate)
-  let rScale = scale({ minmax: [0, radius], world: [0, 50] })
-  let shapes = items.map((obj) => {
-    let r = rScale(obj.radius)
-    let path = d3Shape.arc()({
-      startAngle: xScale(obj.to) - q + rotate,
-      endAngle: xScale(obj.from) - q + rotate,
-      innerRadius: r,
-      outerRadius: r + rScale(obj.width)
-    })
-    return {
-      path: path,
-      color: obj.color
-    }
-  })
+  let rotate = toRadian(world.rotate)
+  // console.log(world.rotate)
+
+  let maxR = maxRadius(arcs, lines)
+  maxR = maxR + world.margin
+  let rScale = scale({ minmax: [0, maxR], world: [0, 50] })
+
+  // draw arcs
+  let shapes = drawArcs(arcs, xScale, rScale, q, rotate)
+  // draw lines
+  shapes = shapes.concat(drawLines(lines, xScale, rScale, q, rotate))
+  // draw ticks
+  shapes = shapes.concat(drawTicks(ticks, xScale, rScale, q, rotate))
+  console.log(shapes)
   return shapes
 }
 export default layout

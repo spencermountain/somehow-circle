@@ -1,5 +1,7 @@
 import { writable } from 'svelte/store'
 
-export const items = writable([])
+export const arcs = writable([])
+export const lines = writable([])
+export const ticks = writable([])
 //
-export const _rotate = 0
+// export const _rotate = 0

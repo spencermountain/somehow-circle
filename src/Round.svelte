@@ -5,7 +5,7 @@
   import scale from './lib/scale'
   import colors from './lib/colors'
   import layout from './layout'
-  import { items } from './stores.js'
+  import { arcs, lines, ticks } from './stores.js'
 
   export let radius = 500
   export let rotate = 0
@@ -23,13 +23,8 @@
   }
   let shapes = []
   onMount(() => {
-    shapes = layout($items, world)
-  })
-
-  // rotate = writable(rotate)
-  console.log(rotate)
-  rotate.subscribe(val => {
-    console.log(val)
+    shapes = layout($arcs, $lines, $ticks, world)
+    // console.log(shapes)
   })
 </script>
 
@@ -42,13 +37,23 @@
 <div class="container">
   <svg viewBox="-50,-50,100,100" width={radius * 2} height={radius * 2}>
     {#each shapes as o}
-      <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
+      {#if o.type === 'arc'}
+        <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
+      {/if}
+      {#if o.type === 'line'}
+        <path
+          class="link"
+          d={o.path}
+          stroke={o.color}
+          fill={o.color}
+          style=""
+          stroke-width={o.width} />
+      {/if}
+      {#if o.type === 'ticks'}
+        <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
+      {/if}
     {/each}
   </svg>
-  <!-- {#each shapes as o}
-    {#if o.label}
-      <div style="color:white;">hiiiiiii</div>
-    {/if}
-  {/each} -->
+
 </div>
 <slot />
