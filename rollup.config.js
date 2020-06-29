@@ -3,7 +3,7 @@ import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import livereload from 'rollup-plugin-livereload'
 import { terser } from 'rollup-plugin-terser'
-import nodeResolve from 'rollup-plugin-node-resolve'
+// import nodeResolve from 'rollup-plugin-node-resolve'
 
 const production = false
 
@@ -31,7 +31,7 @@ export default {
     file: 'build/bundle.js'
   },
   plugins: [
-    nodeResolve(),
+    // nodeResolve(),
     svelte({
       dev: !production,
       css: (css) => {
