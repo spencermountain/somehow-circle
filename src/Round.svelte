@@ -32,7 +32,7 @@
 </style>
 
 <div class="container">
-  <svg viewBox="-50,-50,100,100" shape-rendering="geometricPrecision">
+  <svg viewBox="-50,-50,100,100" shape-rendering="geometricPrecision" width="100%" height="100%">
     {#each shapes as o}
       {#if o.type === 'arc'}
         <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
