@@ -1,23 +1,27 @@
 <script>
-  import { lines } from './stores.js'
+  import { ticks } from './stores.js'
   import colors from './lib/colors'
   export let angle = 0
   export let at = 0
   angle = angle || at
-  export let length = 40
   export let radius = 0
-  export let width = 0.1
+  export let rotate = 90
+  export let size = 1.5
+  export let align = 'left'
+  export let text = ''
 
   export let color = 'grey'
   color = colors[color] || color
 
-  lines.update(arr => {
+  ticks.update(arr => {
     arr.push({
+      text: text,
       color: color,
+      align: align,
       angle: Number(angle),
       radius: Number(radius),
-      length: Number(length),
-      width: Number(width)
+      size: Number(size),
+      rotate: Number(rotate)
     })
     return arr
   })

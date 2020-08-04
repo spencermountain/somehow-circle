@@ -3,6 +3,7 @@ import scale from '../lib/scale'
 import drawArcs from './drawArcs'
 import drawLines from './drawLines'
 import drawLabels from './drawLabels'
+import drawTicks from './drawTicks'
 
 let q = Math.PI / 2
 const trig = [-Math.PI, Math.PI]
@@ -29,7 +30,7 @@ const maxRadius = function (arcs, lines) {
   return max
 }
 
-const layout = function (arcs, lines, labels, world) {
+const layout = function (arcs, lines, labels, ticks, world) {
   let xScale = scale({ minmax: [world.from, world.to], world: trig })
   let rotate = toRadian(world.rotate)
   // console.log(world.rotate)
@@ -42,9 +43,10 @@ const layout = function (arcs, lines, labels, world) {
   let shapes = drawArcs(arcs, xScale, rScale, q, rotate)
   // draw lines
   shapes = shapes.concat(drawLines(lines, xScale, rScale, q, rotate))
-  // draw ticks
+  // draw kabeks
   shapes = shapes.concat(drawLabels(labels, xScale, rScale, q, rotate))
-  console.log(shapes)
+  // draw ticks
+  shapes = shapes.concat(drawTicks(ticks, xScale, rScale, q, rotate))
   return shapes
 }
 export default layout

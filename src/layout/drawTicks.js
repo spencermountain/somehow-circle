@@ -1,5 +1,3 @@
-import * as d3Shape from 'd3-shape'
-
 const findPoint = function (angle, r) {
   return {
     x: r * Math.sin(angle),
@@ -26,7 +24,7 @@ const drawLabels = function (labels, xScale, rScale, q, rotate) {
       angle += obj.rotate
     }
     return {
-      type: 'label',
+      type: 'tick',
       x: point.x,
       y: point.y,
       angle: angle,

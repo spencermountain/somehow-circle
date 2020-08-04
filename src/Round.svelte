@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import layout from './layout'
-  import { arcs, lines, labels } from './stores.js'
+  import { arcs, lines, labels, ticks } from './stores.js'
 
   export let radius = 500
   export let rotate = 0
@@ -19,7 +19,7 @@
   }
   let shapes = []
   onMount(() => {
-    shapes = layout($arcs, $lines, $labels, world)
+    shapes = layout($arcs, $lines, $labels, $ticks, world)
     // console.log(shapes)
   })
 </script>
@@ -54,7 +54,18 @@
           font-size={o.size}
           text-anchor={o.align}
           fill={o.color}>
-          {o.text}
+          {@html o.text}
+        </text>
+      {/if}
+      {#if o.type === 'tick'}
+        <text
+          x={o.x}
+          y={o.y}
+          transform="rotate({o.angle},{o.x},{o.y})"
+          font-size={o.size}
+          text-anchor={o.align}
+          fill={o.color}>
+          {@html o.text}
         </text>
       {/if}
     {/each}
