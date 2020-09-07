@@ -21,9 +21,6 @@
 
 a **svelte** component to draw circular infographics.
 
-- a version of [somehow](https://github.com/spencermountain/somehow) that has two scales - a round one, and a radial one.
-  This lets you easily plot data into a pie-chart-like form, and automatically fit the scales to the data, and responsively fit the graph to the page.
-
 `npm i somehow-circle`
 
 ```html
@@ -41,6 +38,9 @@ a **svelte** component to draw circular infographics.
 ```
 
 ![image](https://user-images.githubusercontent.com/399657/92408329-2bccd580-f10b-11ea-80f2-774d41cb5daf.png)
+
+a Svelte component that has two automatically-resizing scales - a round one, and a radial one.
+This lets you easily plot data into a pie-chart-like form, and automatically fit the scales to the data, and responsively fit the graph to the page.
 
 the svg will resize responsively to fit your container.
 
