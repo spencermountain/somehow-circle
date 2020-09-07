@@ -2,10 +2,6 @@ import svelte from 'rollup-plugin-svelte'
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import livereload from 'rollup-plugin-livereload'
-import { terser } from 'rollup-plugin-terser'
-// import nodeResolve from 'rollup-plugin-node-resolve'
-
-const production = false
 
 function serve() {
   let started = false
@@ -13,7 +9,7 @@ function serve() {
     writeBundle() {
       if (!started) {
         started = true
-        require('child_process').spawn('npm', ['run', 'serve'], {
+        require('child_process').spawn('serve', ['.'], {
           stdio: ['ignore', 'inherit', 'inherit'],
           shell: true
         })
@@ -31,9 +27,8 @@ export default {
     file: 'build/bundle.js'
   },
   plugins: [
-    // nodeResolve(),
     svelte({
-      dev: !production,
+      dev: true,
       css: (css) => {
         css.write('build/bundle.css', false)
       }
@@ -43,9 +38,8 @@ export default {
       dedupe: ['svelte']
     }),
     commonjs(),
-    !production && serve(),
-    !production && livereload('.'),
-    production && terser()
+    serve(),
+    livereload('.')
   ],
   watch: {
     clearScreen: false

@@ -7,7 +7,7 @@
   export let radius = 0
   export let rotate = 90
   export let size = 1.5
-  export let align = 'left'
+  export let align = angle < 0 ? 'left' : 'right'
   export let text = ''
 
   export let color = 'grey'
