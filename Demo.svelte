@@ -3,7 +3,10 @@
 </script>
 
 <style>
-
+  .container {
+    width: 50%;
+    border: 1px solid grey;
+  }
 </style>
 
 <div class="col">
@@ -14,7 +17,7 @@
       somehow-circle
     </a>
   </div>
-  <div style="width:50%; left:10%;">
+  <div class="container">
     <Round rotate="0" margin="10">
       <Arc from="-45" to="45" color="blue" width="8" />
       <Arc from="-10" to="-5" color="red" width="8" />

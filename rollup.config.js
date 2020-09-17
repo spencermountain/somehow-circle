@@ -29,9 +29,7 @@ export default {
   plugins: [
     svelte({
       dev: true,
-      css: (css) => {
-        css.write('build/bundle.css', false)
-      }
+      css: true
     }),
     resolve({
       browser: true,

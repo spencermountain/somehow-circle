@@ -25,9 +25,11 @@
 </script>
 
 <style>
-  svg {
-    /* border: 1px solid grey; */
-    overflow: visible;
+  path {
+    pointer-events: all;
+  }
+  path:hover {
+    filter: drop-shadow(0px 1px 1px steelblue);
   }
 </style>
 
