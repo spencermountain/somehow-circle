@@ -10,10 +10,16 @@ const drawArcs = function (arcs, xScale, rScale, q, rotate) {
       outerRadius: r + rScale(obj.width)
     }
     let path = d3Shape.arc()(attrs)
+    let clockwise = attrs.endAngle < attrs.startAngle
+    let arrow = {}
+    if (clockwise) {
+    }
     return {
-      type: 'arc',
+      type: 'arrow',
+      clockwise: clockwise,
       path: path,
-      color: obj.color
+      color: obj.color,
+      arrow: arrow
     }
   })
 }

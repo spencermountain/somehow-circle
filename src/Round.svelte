@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import layout from './layout'
-  import { arcs, lines, labels, ticks } from './stores.js'
+  import { arcs, lines, labels, ticks, arrows } from './stores.js'
 
   export let radius = 500
   export let rotate = 0
@@ -19,8 +19,8 @@
   }
   let shapes = []
   onMount(() => {
-    shapes = layout($arcs, $lines, $labels, $ticks, world)
-    // console.log(shapes)
+    shapes = layout($arcs, $lines, $labels, $ticks, $arrows, world)
+    console.log(shapes)
   })
 </script>
 
@@ -35,6 +35,22 @@
 
 <div class="container">
   <svg viewBox="-50,-50,100,100" shape-rendering="geometricPrecision" width="100%" height="100%">
+
+    <!-- arrow-head -->
+    <defs>
+      <marker
+        id="triangle"
+        viewBox="0 0 10 10"
+        refX="4"
+        refY="6"
+        markerUnits="strokeWidth"
+        markerWidth="9"
+        markerHeight="9"
+        orient="auto">
+        <path d="M 0 0 L 10 4 L 0 10 z" fill="#D68881" transform="rotate(23)" />
+      </marker>
+    </defs>
+
     {#each shapes as o}
       {#if o.type === 'arc'}
         <path class="link" d={o.path} stroke="none" fill={o.color} style="" stroke-width={1} />
@@ -69,6 +85,16 @@
           fill={o.color}>
           {@html o.text}
         </text>
+      {/if}
+      {#if o.type === 'arrow'}
+        <path
+          class="link"
+          d={o.path}
+          stroke="none"
+          fill={o.color}
+          style=""
+          stroke-width={1}
+          marker-end="url(#triangle)" />
       {/if}
     {/each}
   </svg>
