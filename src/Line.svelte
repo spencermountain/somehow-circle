@@ -1,26 +1,33 @@
 <script>
-  import { lines } from './stores.js'
+  import getScales from './layout/scales.js'
   import colors from './lib/colors'
-  export let angle = 0
-  export let at = 0
-  angle = angle || at
-  export let length = 40
-  export let radius = 0
-  export let width = 0.1
+  import drawLine from './layout/drawLines.js'
+  import { afterUpdate } from 'svelte'
+  export let radius = 80
+  export let width = 20
 
-  export let color = 'grey'
+  export let color = 'blue'
   color = colors[color] || color
 
-  lines.update(arr => {
-    arr.push({
+  $: res = {}
+  afterUpdate(() => {
+    let obj = {
       color: color,
       angle: Number(angle),
       radius: Number(radius),
       length: Number(length),
       width: Number(width)
-    })
-    return arr
+    }
+    let { xScale, rScale } = getScales(obj)
+    res = drawLine(obj, xScale, rScale)
   })
 </script>
 
-<div />
+<path
+  class="link"
+  d={res.path}
+  stroke={res.color}
+  fill={res.color}
+  style=""
+  stroke-width={res.width}
+/>

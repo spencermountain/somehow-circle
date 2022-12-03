@@ -1,20 +1,16 @@
 <script>
-  import { ticks } from './stores.js'
+  import getScales from './layout/scales.js'
+  import drawTicks from './layout/drawTicks.js'
   import colors from './lib/colors'
-  export let angle = 0
-  export let at = 0
-  angle = angle || at
-  export let radius = 0
-  export let rotate = 90
-  export let size = 1.5
-  export let align = angle < 0 ? 'left' : 'right'
-  export let text = ''
+  import { afterUpdate } from 'svelte'
+  export let radius = 80
 
-  export let color = 'grey'
+  export let color = 'blue'
   color = colors[color] || color
 
-  ticks.update(arr => {
-    arr.push({
+  $: res = {}
+  afterUpdate(() => {
+    let obj = {
       text: text,
       color: color,
       align: align,
@@ -22,9 +18,19 @@
       radius: Number(radius),
       size: Number(size),
       rotate: Number(rotate)
-    })
-    return arr
+    }
+    let { xScale, rScale } = getScales(obj)
+    res = drawTicks(obj, xScale, rScale)
   })
 </script>
 
-<div />
+<text
+  x={res.x}
+  y={res.y}
+  transform="rotate({res.angle},{res.x},{res.y})"
+  font-size={res.size}
+  text-anchor={res.align}
+  fill={res.color}
+>
+  {@html res.text}
+</text>

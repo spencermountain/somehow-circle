@@ -1,6 +1,8 @@
 <script>
-  import { labels } from './stores.js'
+  import getScales from './layout/scales.js'
   import colors from './lib/colors'
+  import { afterUpdate } from 'svelte'
+  import drawLabel from './layout/drawLabels.js'
   export let angle = 0
   export let at = 0
   angle = angle || at
@@ -12,9 +14,9 @@
 
   export let color = 'grey'
   color = colors[color] || color
-
-  labels.update(arr => {
-    arr.push({
+  $: res = {}
+  afterUpdate(() => {
+    let obj = {
       text: text,
       color: color,
       align: align,
@@ -22,9 +24,19 @@
       radius: Number(radius),
       size: Number(size),
       rotate: Number(rotate)
-    })
-    return arr
+    }
+    let { xScale, rScale } = getScales(obj)
+    res = drawLabel(obj, xScale, rScale)
   })
 </script>
 
-<div />
+<text
+  x={res.x}
+  y={res.y}
+  transform="rotate({res.angle},{res.x},{res.y})"
+  font-size={res.size}
+  text-anchor={res.align}
+  fill={res.color}
+>
+  {@html res.text}
+</text>
