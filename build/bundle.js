@@ -449,7 +449,13 @@ var app = (function () {
     var world = writable({
       maxR: 0,
       rotate: 0,
-      world: {},
+      world: {
+        radius: 0,
+        rotate: 0,
+        from: 0,
+        to: 0,
+        margin: 0,
+      },
       q: Math.PI / 2,
     });
     // export default world
@@ -1743,7 +1749,7 @@ var app = (function () {
     			attr_dev(path, "stroke", path_stroke_value = /*res*/ ctx[0].color);
     			attr_dev(path, "fill", path_fill_value = /*res*/ ctx[0].color);
     			attr_dev(path, "stroke-width", path_stroke_width_value = /*res*/ ctx[0].width);
-    			add_location(path, file$3, 25, 0, 581);
+    			add_location(path, file$3, 29, 0, 671);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1787,8 +1793,12 @@ var app = (function () {
     }
 
     function instance$3($$self, $$props, $$invalidate) {
-    	let { radius = 80 } = $$props;
-    	let { width = 20 } = $$props;
+    	let { angle = 0 } = $$props;
+    	let { at = 0 } = $$props;
+    	angle = angle || at;
+    	let { length = 40 } = $$props;
+    	let { radius = 0 } = $$props;
+    	let { width = 0.1 } = $$props;
     	let { color = "blue" } = $$props;
     	color = colors[color] || color;
 
@@ -1805,7 +1815,7 @@ var app = (function () {
     		$$invalidate(0, res = drawLines(obj, xScale, rScale));
     	});
 
-    	const writable_props = ["radius", "width", "color"];
+    	const writable_props = ["angle", "at", "length", "radius", "width", "color"];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Line> was created with unknown prop '${key}'`);
@@ -1815,9 +1825,12 @@ var app = (function () {
     	validate_slots("Line", $$slots, []);
 
     	$$self.$$set = $$props => {
-    		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
-    		if ("width" in $$props) $$invalidate(3, width = $$props.width);
-    		if ("color" in $$props) $$invalidate(1, color = $$props.color);
+    		if ("angle" in $$props) $$invalidate(1, angle = $$props.angle);
+    		if ("at" in $$props) $$invalidate(3, at = $$props.at);
+    		if ("length" in $$props) $$invalidate(4, length = $$props.length);
+    		if ("radius" in $$props) $$invalidate(5, radius = $$props.radius);
+    		if ("width" in $$props) $$invalidate(6, width = $$props.width);
+    		if ("color" in $$props) $$invalidate(2, color = $$props.color);
     	};
 
     	$$self.$capture_state = () => ({
@@ -1825,6 +1838,9 @@ var app = (function () {
     		colors,
     		drawLine: drawLines,
     		afterUpdate,
+    		angle,
+    		at,
+    		length,
     		radius,
     		width,
     		color,
@@ -1832,9 +1848,12 @@ var app = (function () {
     	});
 
     	$$self.$inject_state = $$props => {
-    		if ("radius" in $$props) $$invalidate(2, radius = $$props.radius);
-    		if ("width" in $$props) $$invalidate(3, width = $$props.width);
-    		if ("color" in $$props) $$invalidate(1, color = $$props.color);
+    		if ("angle" in $$props) $$invalidate(1, angle = $$props.angle);
+    		if ("at" in $$props) $$invalidate(3, at = $$props.at);
+    		if ("length" in $$props) $$invalidate(4, length = $$props.length);
+    		if ("radius" in $$props) $$invalidate(5, radius = $$props.radius);
+    		if ("width" in $$props) $$invalidate(6, width = $$props.width);
+    		if ("color" in $$props) $$invalidate(2, color = $$props.color);
     		if ("res" in $$props) $$invalidate(0, res = $$props.res);
     	};
 
@@ -1845,13 +1864,21 @@ var app = (function () {
     	}
 
     	 $$invalidate(0, res = {});
-    	return [res, color, radius, width];
+    	return [res, angle, color, at, length, radius, width];
     }
 
     class Line extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$3, create_fragment$3, safe_not_equal, { radius: 2, width: 3, color: 1 });
+
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {
+    			angle: 1,
+    			at: 3,
+    			length: 4,
+    			radius: 5,
+    			width: 6,
+    			color: 2
+    		});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -1859,6 +1886,30 @@ var app = (function () {
     			options,
     			id: create_fragment$3.name
     		});
+    	}
+
+    	get angle() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set angle(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get at() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set at(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get length() {
+    		throw new Error("<Line>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set length(value) {
+    		throw new Error("<Line>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get radius() {
@@ -2362,22 +2413,26 @@ var app = (function () {
     function add_css$1() {
     	var style = element("style");
     	style.id = "svelte-1retagn-style";
-    	style.textContent = ".container.svelte-1retagn{width:50%;border:1px solid grey}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiRGVtby5zdmVsdGUiLCJzb3VyY2VzIjpbIkRlbW8uc3ZlbHRlIl0sInNvdXJjZXNDb250ZW50IjpbIjxzY3JpcHQ+XG4gIGltcG9ydCB7IFJvdW5kLCBBcmMsIExpbmUsIExhYmVsLCBDaXJjbGUsIEFycm93IH0gZnJvbSAnLi9zcmMnXG4gIGxldCB3ID0gMjBcbiAgc2V0SW50ZXJ2YWwoKCkgPT4ge1xuICAgIGNvbnNvbGUubG9nKCdjaGFuZ2UnKVxuICAgIHcgPSBNYXRoLnJhbmRvbSgpICogMjAwXG4gIH0sIDEwMDApXG48L3NjcmlwdD5cblxuPGRpdiBjbGFzcz1cImNvbFwiPlxuICA8ZGl2IGNsYXNzPVwiaDNcIj5cbiAgICA8YVxuICAgICAgc3R5bGU9XCJjb2xvcjpzdGVlbGJsdWU7IGZvbnQtc2l6ZToyMHB4O1wiXG4gICAgICBocmVmPVwiaHR0cHM6Ly9naXRodWIuY29tL3NwZW5jZXJtb3VudGFpbi9zb21laG93LWNpcmNsZVwiXG4gICAgPlxuICAgICAgc29tZWhvdy1jaXJjbGVcbiAgICA8L2E+XG4gIDwvZGl2PlxuICA8ZGl2IGNsYXNzPVwiY29udGFpbmVyXCI+XG4gICAgPFJvdW5kIHJvdGF0ZT1cIjBcIiBtYXJnaW49XCI0MFwiPlxuICAgICAgPEFycm93IGZyb209XCIxNVwiIHRvPXt3fSBjb2xvcj1cInJvc2VcIiB3aWR0aD1cIjVcIiAvPlxuICAgICAgPEFycm93IGZyb209XCIxOTVcIiB0bz1cIjM0NVwiIGNvbG9yPVwiZ3JlZW5cIiB3aWR0aD1cIjVcIiAvPlxuICAgICAgPExhYmVsIGFuZ2xlPVwiMTgwXCIgcmFkaXVzPVwiOTBcIiB0ZXh0PVwiVUlcIiBjb2xvcj1cImdyZXlcIiBzaXplPVwiNFwiIC8+XG4gICAgICA8TGFiZWwgYW5nbGU9XCIwXCIgcmFkaXVzPVwiMTEwXCIgdGV4dD1cIkFyY2FuZSBDTElcIiBjb2xvcj1cImdyZXlcIiBzaXplPVwiNFwiIC8+XG4gICAgPC9Sb3VuZD5cbiAgPC9kaXY+XG48L2Rpdj5cblxuPHN0eWxlPlxuICAuY29udGFpbmVyIHtcbiAgICB3aWR0aDogNTAlO1xuICAgIGJvcmRlcjogMXB4IHNvbGlkIGdyZXk7XG4gIH1cbjwvc3R5bGU+XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBNkJFLFVBQVUsZUFBQyxDQUFDLEFBQ1YsS0FBSyxDQUFFLEdBQUcsQ0FDVixNQUFNLENBQUUsR0FBRyxDQUFDLEtBQUssQ0FBQyxJQUFJLEFBQ3hCLENBQUMifQ== */";
+    	style.textContent = ".container.svelte-1retagn{width:50%;border:1px solid grey}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiRGVtby5zdmVsdGUiLCJzb3VyY2VzIjpbIkRlbW8uc3ZlbHRlIl0sInNvdXJjZXNDb250ZW50IjpbIjxzY3JpcHQ+XG4gIGltcG9ydCB7IFJvdW5kLCBBcmMsIExpbmUsIExhYmVsLCBDaXJjbGUsIEFycm93IH0gZnJvbSAnLi9zcmMnXG4gIGxldCB3ID0gMjBcbiAgc2V0SW50ZXJ2YWwoKCkgPT4ge1xuICAgIGNvbnNvbGUubG9nKCdjaGFuZ2UnKVxuICAgIHcgPSBNYXRoLnJhbmRvbSgpICogMjAwICsgMjBcbiAgfSwgMTAwMClcbjwvc2NyaXB0PlxuXG48ZGl2IGNsYXNzPVwiY29sXCI+XG4gIDxkaXYgY2xhc3M9XCJoM1wiPlxuICAgIDxhXG4gICAgICBzdHlsZT1cImNvbG9yOnN0ZWVsYmx1ZTsgZm9udC1zaXplOjIwcHg7XCJcbiAgICAgIGhyZWY9XCJodHRwczovL2dpdGh1Yi5jb20vc3BlbmNlcm1vdW50YWluL3NvbWVob3ctY2lyY2xlXCJcbiAgICA+XG4gICAgICBzb21laG93LWNpcmNsZVxuICAgIDwvYT5cbiAgPC9kaXY+XG4gIDxkaXYgY2xhc3M9XCJjb250YWluZXJcIj5cbiAgICA8Um91bmQgcm90YXRlPVwiMFwiIG1hcmdpbj1cIjQwXCI+XG4gICAgICA8QXJyb3cgZnJvbT1cIjE1XCIgdG89e3d9IGNvbG9yPVwicm9zZVwiIHdpZHRoPVwiNVwiIC8+XG4gICAgICA8QXJjIGZyb209XCIxOTVcIiB0bz1cIjM0NVwiIGNvbG9yPVwiZ3JlZW5cIiB3aWR0aD1cIjVcIiAvPlxuICAgICAgPENpcmNsZSBjb2xvcj1cImdyZXlwdXJwbGVcIiB3aWR0aD1cIjFcIiByYWRpdXM9XCIxOVwiIC8+XG4gICAgICA8TGluZSBjb2xvcj1cImdyZXlwdXJwbGVcIiB3aWR0aD1cIjFcIiByYWRpdXM9XCIxOVwiIGFuZ2xlPXsyMH0gLz5cbiAgICAgIDxMYWJlbCBhbmdsZT1cIjBcIiByYWRpdXM9XCIxMTBcIiB0ZXh0PVwibGVmdCBzaWRlXCIgY29sb3I9XCJncmV5XCIgc2l6ZT1cIjRcIiAvPlxuICAgICAgPExhYmVsIGFuZ2xlPVwiMTgwXCIgcmFkaXVzPVwiOTBcIiB0ZXh0PVwicmlnaHQgc2lkZVwiIGNvbG9yPVwiZ3JleVwiIHNpemU9XCI0XCIgLz5cbiAgICA8L1JvdW5kPlxuICA8L2Rpdj5cbjwvZGl2PlxuXG48c3R5bGU+XG4gIC5jb250YWluZXIge1xuICAgIHdpZHRoOiA1MCU7XG4gICAgYm9yZGVyOiAxcHggc29saWQgZ3JleTtcbiAgfVxuPC9zdHlsZT5cbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUErQkUsVUFBVSxlQUFDLENBQUMsQUFDVixLQUFLLENBQUUsR0FBRyxDQUNWLE1BQU0sQ0FBRSxHQUFHLENBQUMsS0FBSyxDQUFDLElBQUksQUFDeEIsQ0FBQyJ9 */";
     	append_dev(document.head, style);
     }
 
     // (20:4) <Round rotate="0" margin="40">
     function create_default_slot(ctx) {
-    	let arrow0;
+    	let arrow;
     	let t0;
-    	let arrow1;
+    	let arc;
     	let t1;
-    	let label0;
+    	let circle;
     	let t2;
+    	let line;
+    	let t3;
+    	let label0;
+    	let t4;
     	let label1;
     	let current;
 
-    	arrow0 = new Arrow({
+    	arrow = new Arrow({
     			props: {
     				from: "15",
     				to: /*w*/ ctx[0],
@@ -2387,7 +2442,7 @@ var app = (function () {
     			$$inline: true
     		});
 
-    	arrow1 = new Arrow({
+    	arc = new Arc({
     			props: {
     				from: "195",
     				to: "345",
@@ -2397,11 +2452,30 @@ var app = (function () {
     			$$inline: true
     		});
 
+    	circle = new Circle({
+    			props: {
+    				color: "greypurple",
+    				width: "1",
+    				radius: "19"
+    			},
+    			$$inline: true
+    		});
+
+    	line = new Line({
+    			props: {
+    				color: "greypurple",
+    				width: "1",
+    				radius: "19",
+    				angle: 20
+    			},
+    			$$inline: true
+    		});
+
     	label0 = new Label({
     			props: {
-    				angle: "180",
-    				radius: "90",
-    				text: "UI",
+    				angle: "0",
+    				radius: "110",
+    				text: "left side",
     				color: "grey",
     				size: "4"
     			},
@@ -2410,9 +2484,9 @@ var app = (function () {
 
     	label1 = new Label({
     			props: {
-    				angle: "0",
-    				radius: "110",
-    				text: "Arcane CLI",
+    				angle: "180",
+    				radius: "90",
+    				text: "right side",
     				color: "grey",
     				size: "4"
     			},
@@ -2421,51 +2495,67 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			create_component(arrow0.$$.fragment);
+    			create_component(arrow.$$.fragment);
     			t0 = space();
-    			create_component(arrow1.$$.fragment);
+    			create_component(arc.$$.fragment);
     			t1 = space();
-    			create_component(label0.$$.fragment);
+    			create_component(circle.$$.fragment);
     			t2 = space();
+    			create_component(line.$$.fragment);
+    			t3 = space();
+    			create_component(label0.$$.fragment);
+    			t4 = space();
     			create_component(label1.$$.fragment);
     		},
     		m: function mount(target, anchor) {
-    			mount_component(arrow0, target, anchor);
+    			mount_component(arrow, target, anchor);
     			insert_dev(target, t0, anchor);
-    			mount_component(arrow1, target, anchor);
+    			mount_component(arc, target, anchor);
     			insert_dev(target, t1, anchor);
-    			mount_component(label0, target, anchor);
+    			mount_component(circle, target, anchor);
     			insert_dev(target, t2, anchor);
+    			mount_component(line, target, anchor);
+    			insert_dev(target, t3, anchor);
+    			mount_component(label0, target, anchor);
+    			insert_dev(target, t4, anchor);
     			mount_component(label1, target, anchor);
     			current = true;
     		},
     		p: function update(ctx, dirty) {
-    			const arrow0_changes = {};
-    			if (dirty & /*w*/ 1) arrow0_changes.to = /*w*/ ctx[0];
-    			arrow0.$set(arrow0_changes);
+    			const arrow_changes = {};
+    			if (dirty & /*w*/ 1) arrow_changes.to = /*w*/ ctx[0];
+    			arrow.$set(arrow_changes);
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(arrow0.$$.fragment, local);
-    			transition_in(arrow1.$$.fragment, local);
+    			transition_in(arrow.$$.fragment, local);
+    			transition_in(arc.$$.fragment, local);
+    			transition_in(circle.$$.fragment, local);
+    			transition_in(line.$$.fragment, local);
     			transition_in(label0.$$.fragment, local);
     			transition_in(label1.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(arrow0.$$.fragment, local);
-    			transition_out(arrow1.$$.fragment, local);
+    			transition_out(arrow.$$.fragment, local);
+    			transition_out(arc.$$.fragment, local);
+    			transition_out(circle.$$.fragment, local);
+    			transition_out(line.$$.fragment, local);
     			transition_out(label0.$$.fragment, local);
     			transition_out(label1.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			destroy_component(arrow0, detaching);
+    			destroy_component(arrow, detaching);
     			if (detaching) detach_dev(t0);
-    			destroy_component(arrow1, detaching);
+    			destroy_component(arc, detaching);
     			if (detaching) detach_dev(t1);
-    			destroy_component(label0, detaching);
+    			destroy_component(circle, detaching);
     			if (detaching) detach_dev(t2);
+    			destroy_component(line, detaching);
+    			if (detaching) detach_dev(t3);
+    			destroy_component(label0, detaching);
+    			if (detaching) detach_dev(t4);
     			destroy_component(label1, detaching);
     		}
     	};
@@ -2512,13 +2602,13 @@ var app = (function () {
     			set_style(a, "color", "steelblue");
     			set_style(a, "font-size", "20px");
     			attr_dev(a, "href", "https://github.com/spencermountain/somehow-circle");
-    			add_location(a, file$6, 11, 4, 226);
+    			add_location(a, file$6, 11, 4, 231);
     			attr_dev(div0, "class", "h3");
-    			add_location(div0, file$6, 10, 2, 205);
+    			add_location(div0, file$6, 10, 2, 210);
     			attr_dev(div1, "class", "container svelte-1retagn");
-    			add_location(div1, file$6, 18, 2, 386);
+    			add_location(div1, file$6, 18, 2, 391);
     			attr_dev(div2, "class", "col");
-    			add_location(div2, file$6, 9, 0, 185);
+    			add_location(div2, file$6, 9, 0, 190);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2573,7 +2663,7 @@ var app = (function () {
     	setInterval(
     		() => {
     			console.log("change");
-    			$$invalidate(0, w = Math.random() * 200);
+    			$$invalidate(0, w = Math.random() * 200 + 20);
     		},
     		1000
     	);

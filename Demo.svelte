@@ -3,7 +3,7 @@
   let w = 20
   setInterval(() => {
     console.log('change')
-    w = Math.random() * 200
+    w = Math.random() * 200 + 20
   }, 1000)
 </script>
 
@@ -19,9 +19,11 @@
   <div class="container">
     <Round rotate="0" margin="40">
       <Arrow from="15" to={w} color="rose" width="5" />
-      <Arrow from="195" to="345" color="green" width="5" />
-      <Label angle="180" radius="90" text="UI" color="grey" size="4" />
-      <Label angle="0" radius="110" text="Arcane CLI" color="grey" size="4" />
+      <Arc from="195" to="345" color="green" width="5" />
+      <Circle color="greypurple" width="1" radius="19" />
+      <Line color="greypurple" width="1" radius="19" angle={20} />
+      <Label angle="0" radius="110" text="left side" color="grey" size="4" />
+      <Label angle="180" radius="90" text="right side" color="grey" size="4" />
     </Round>
   </div>
 </div>
