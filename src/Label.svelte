@@ -33,7 +33,7 @@
 <text
   x={res.x}
   y={res.y}
-  transform="rotate({res.angle},{res.x},{res.y})"
+  transform="rotate({res.angle || 0},{res.x || 0},{res.y || 0})"
   font-size={res.size}
   text-anchor={res.align}
   fill={res.color}

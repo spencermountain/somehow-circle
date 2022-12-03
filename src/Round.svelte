@@ -1,6 +1,6 @@
 <script>
+  import { afterUpdate } from 'svelte'
   import world from './world.js'
-
   export let radius = 500
   export let rotate = 0
   export let from = 0
@@ -8,14 +8,24 @@
   export let margin = 0
   radius = Number(radius)
 
-  world.update((obj) => {
-    obj.radius = radius
-    obj.rotate = Number(rotate)
-    obj.from = Number(from)
-    obj.to = Number(to)
-    obj.margin = Number(margin)
-    return obj
+  function toRadian(deg) {
+    var pi = Math.PI
+    return deg * (pi / 180)
+  }
+  const change = () => {
+    world.update((obj) => {
+      obj.radius = radius
+      obj.rotate = toRadian(Number(rotate))
+      obj.from = Number(from)
+      obj.to = Number(to)
+      obj.margin = Number(margin)
+      return obj
+    })
+  }
+  afterUpdate(() => {
+    change()
   })
+  change()
 </script>
 
 <div class="container">
